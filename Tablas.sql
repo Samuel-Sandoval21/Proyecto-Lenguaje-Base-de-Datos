@@ -9,7 +9,7 @@ NEXT 10M
 MAXSIZE 500M;
 
 -- =========================
--- Creaci n de perfiles 
+-- Creacion de perfiles 
 -- =========================
 CREATE PROFILE perfil_admin LIMIT
     SESSIONS_PER_USER          2
@@ -109,7 +109,7 @@ GRANT rol_consulta TO Consulta;
 GRANT CONNECT TO Consulta;
 
 -- =========================
--- Verificaci n 
+-- Verificacion 
 -- =========================
 SELECT USERNAME, PROFILE
 FROM DBA_USERS
