@@ -5,6 +5,17 @@
 <title><?= $pageTitle ?? "TiendaTech" ?></title>
 <link rel="stylesheet" href="views/style.css">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+.dropdown-submenu {
+    position: relative;
+}
+
+.dropdown-submenu .dropdown-menu {
+    top: 0;
+    left: 100%;
+    margin-left: .1rem;
+}
+</style>
 </head>
 <body>
 
@@ -113,5 +124,41 @@ if(isset($view)){
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.querySelectorAll('.dropdown-submenu > a').forEach(function(element){
+
+    element.addEventListener("click", function(e){
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        // cerrar todos los submenus
+        document.querySelectorAll('.dropdown-submenu > a').forEach(function(element){
+            element.addEventListener("click", function(e){
+                e.preventDefault();
+                e.stopPropagation();
+
+                // cerrar todos los submenus
+                document.querySelectorAll('.dropdown-submenu .dropdown-menu').forEach(function(menu){
+                    menu.classList.remove("show");
+                });
+
+                // abrir solo el seleccionado
+                let submenu = this.nextElementSibling;
+                submenu.classList.add("show");
+            });
+        });
+
+        // Cerrar submenus cuando se cierra el dropdown principal
+        document.querySelectorAll('.dropdown').forEach(function(dropdown){
+            dropdown.addEventListener('hidden.bs.dropdown', function () {
+                document.querySelectorAll('.dropdown-submenu .dropdown-menu').forEach(function(menu){
+                    menu.classList.remove("show");
+                });
+            });
+        });
+    });
+});
+</script>
 </body>
 </html>
