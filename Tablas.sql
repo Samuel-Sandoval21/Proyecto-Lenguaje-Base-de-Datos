@@ -280,7 +280,7 @@ BEGIN
     INSERT INTO Proyecto_Base_de_DatosLN (ACCION, FECHA)
     VALUES (CONCAT('Se creó el producto: ', NEW.nombre), NOW());
 END;
-/
+////
 
 CREATE TRIGGER CATEGORIAS_Proyecto_Base_de_DatosLN
 AFTER UPDATE ON CATEGORIAS
@@ -289,7 +289,7 @@ BEGIN
     INSERT INTO Proyecto_Base_de_DatosLN (NOMBRE, TIPO_GENERAL)
     VALUES (CONCAT('Se actualizo la categoía: ', NEW.nombre), NOW());
 END;
-/
+////
 
 CREATE TRIGGER CLIENTE_Proyecto_Base_de_DatosLN
 AFTER INSERT ON CLIENTES
@@ -298,7 +298,7 @@ BEGIN
     INSERT INTO Proyecto_Base_de_DatosLN (ACCION, FECHA)
     VALUES(CONCAT('Se registro el cliente: ', NEW.nombre), NOW());
 END;
-/
+////
 
 
 CREATE OR REPLACE TRIGGER VENTA_Proyecto_Base_de_DatosLN
@@ -308,7 +308,7 @@ BEGIN
     INSERT INTO Proyecto_Base_de_DatosLN (ACCION, FECHA)
     VALUES (CONCAT('Se realizo una venta:', :NEW.ID_VENTA), NOW());
 END;
-/
+////
 
 
 CREATE OR REPLACE TRIGGER USUARIO_Proyecto_Base_de_DatosLN
@@ -318,7 +318,7 @@ BEGIN
     INSERT INTO Proyecto_Base_de_DatosLN (ACCION, FECHA)
     VALUES (CONCAT('Se creó el departamento: ', NEW.nombre), NOW());
 END;
-//
+///
 
 
 -- =========================
