@@ -1,7 +1,7 @@
 -- =========================
 -- Tablespaces
 -- =========================
-CREATE TABLESPACE Proyecto_Base_de_DatosJN
+CREATE TABLESPACE Proyecto_Base_de_DatosLN
 DATAFILE 'C:\ORACLE\ORADATA\ORCL\Proyecto_Base_de_DatosLN.dbf'
 SIZE 100M
 AUTOEXTEND ON
@@ -9,7 +9,7 @@ NEXT 10M
 MAXSIZE 500M;
 
 -- =========================
--- Creaci n de perfiles 
+-- Creación de perfiles 
 -- =========================
 CREATE PROFILE perfil_admin LIMIT
     SESSIONS_PER_USER          2
@@ -73,8 +73,9 @@ FROM DBA_ROLES;
 -- =========================
 -- USUARIO PRINCIPAL
 -- =========================
+
 CREATE USER AdminProyecto IDENTIFIED BY AdminProyecto2026#
-    DEFAULT TABLESPACE Proyecto_Base_de_DatosLN
+    DEFAULT TABLESPACE Proyecto_Base_de_DatosJN
     TEMPORARY TABLESPACE TEMP
     PROFILE perfil_admin
     ACCOUNT UNLOCK;
@@ -86,6 +87,7 @@ ALTER USER AdminProyecto QUOTA UNLIMITED ON Proyecto_Base_de_DatosLN;
 -- =========================
 -- USUARIO OPERADOR
 -- =========================
+
 CREATE USER Operador IDENTIFIED BY Operador2026#
     DEFAULT TABLESPACE Proyecto_Base_de_DatosLN
     TEMPORARY TABLESPACE TEMP
@@ -99,6 +101,7 @@ ALTER USER Operador QUOTA UNLIMITED ON Proyecto_Base_de_DatosLN;
 -- =========================
 -- USUARIO CONSULTA
 -- =========================
+
 CREATE USER Consulta IDENTIFIED BY Consulta2026#
     DEFAULT TABLESPACE Proyecto_Base_de_DatosLN
     TEMPORARY TABLESPACE TEMP
@@ -109,11 +112,21 @@ GRANT rol_consulta TO Consulta;
 GRANT CONNECT TO Consulta;
 
 -- =========================
--- Verificaci n 
+-- Verificación 
 -- =========================
 SELECT USERNAME, PROFILE
 FROM DBA_USERS
 WHERE USERNAME IN ('ADMINPROYECTO','OPERADOR','CONSULTA');
+
+
+ALTER USER AdminProyecto
+DEFAULT TABLESPACE Proyecto_Base_de_DatosLN;
+
+ALTER USER Operador
+DEFAULT TABLESPACE Proyecto_Base_de_DatosLN;
+
+ALTER USER Consulta
+DEFAULT TABLESPACE Proyecto_Base_de_DatosLN;
 
 -- =========================
 -- TABLAS 
@@ -262,6 +275,16 @@ CREATE TABLE DIRECCIONES (
 -- =========================
 
 
+
+
+-- =========================
+-- PERMISOS
+-- =========================
+
+GRANT SELECT ON AdminProyecto.PRODUCTOS TO Consulta;
+GRANT SELECT ON AdminProyecto.MARCAS TO Consulta;
+GRANT SELECT ON AdminProyecto.CATEGORIAS TO Consulta;
+
 -- =========================
 -- CATEGORIAS
 -- =========================
@@ -295,7 +318,7 @@ COMMIT;
 SELECT * FROM CATEGORIAS;
 
 -- =========================
--- MARCASDEFAULT
+-- MARCAS
 -- =========================
 INSERT INTO MARCAS (NOMBRE_MARCA) VALUES ('Razer');
 
@@ -362,9 +385,6 @@ INSERT INTO MARCAS (NOMBRE_MARCA) VALUES ('Aorus');
 -- =========================
 -- PRODUCTOS
 -- =========================
-
-INSERT ALL
-
 -- =========================
 -- PERIFERICOS
 -- =========================
@@ -564,4 +584,9 @@ INSERT INTO DETALLE_VENTA (ID_VENTA, ID_PRODUCTO, CANTIDAD, PRECIO_UNITARIO) VAL
 COMMIT;
 
 
+SELECT * FROM productos
 
+
+
+
+SELECT value FROM v$parameter WHERE name = 'service_names';
