@@ -9,9 +9,9 @@ $sql = "SELECT
             p.STOCK,
             m.NOMBRE_MARCA,
             c.NOMBRE_CATEGORIA
-        FROM PRODUCTOS p
-        JOIN MARCAS m ON p.ID_MARCA = m.ID_MARCA
-        JOIN CATEGORIAS c ON p.ID_CATEGORIA = c.ID_CATEGORIA
+        FROM AdminProyecto.PRODUCTOS p
+        JOIN AdminProyecto.MARCAS m ON p.ID_MARCA = m.ID_MARCA
+        JOIN AdminProyecto.CATEGORIAS c ON p.ID_CATEGORIA = c.ID_CATEGORIA
         ORDER BY p.NOMBRE";
 
 $stid = oci_parse($conn, $sql);
