@@ -9,7 +9,7 @@ NEXT 10M
 MAXSIZE 500M;
 
 -- =========================
--- Creación de perfiles 
+-- Creaciï¿½n de perfiles 
 -- =========================
 CREATE PROFILE perfil_admin LIMIT
     SESSIONS_PER_USER          2
@@ -112,7 +112,7 @@ GRANT rol_consulta TO Consulta;
 GRANT CONNECT TO Consulta;
 
 -- =========================
--- Verificación 
+-- Verificaciï¿½n 
 -- =========================
 SELECT USERNAME, PROFILE
 FROM DBA_USERS
@@ -273,8 +273,52 @@ CREATE TABLE DIRECCIONES (
 -- =========================
 -- Triggers
 -- =========================
+CREATE TRIGGER PRODUCTO_Proyecto_Base_de_DatosLN
+AFTER INSERT ON PRODUCTOS
+FOR EACH ROW
+BEGIN
+    INSERT INTO Proyecto_Base_de_DatosLN (ACCION, FECHA)
+    VALUES (CONCAT('Se creÃ³ el producto: ', NEW.nombre), NOW());
+END;
+/
+
+CREATE TRIGGER CATEGORIAS_Proyecto_Base_de_DatosLN
+AFTER UPDATE ON CATEGORIAS
+FOR EACH ROW
+BEGIN
+    INSERT INTO Proyecto_Base_de_DatosLN (NOMBRE, TIPO_GENERAL)
+    VALUES (CONCAT('Se actualizo la categoÃ­a: ', NEW.nombre), NOW());
+END;
+/
+
+CREATE TRIGGER CLIENTE_Proyecto_Base_de_DatosLN
+AFTER INSERT ON CLIENTES
+FOR EACH ROW
+BEGIN
+    INSERT INTO Proyecto_Base_de_DatosLN (ACCION, FECHA)
+    VALUES(CONCAT('Se registro el cliente: ', NEW.nombre), NOW());
+END;
+/
 
 
+CREATE OR REPLACE TRIGGER VENTA_Proyecto_Base_de_DatosLN
+AFTER INSERT ON VENTAS
+FOR EACH ROW
+BEGIN
+    INSERT INTO Proyecto_Base_de_DatosLN (ACCION, FECHA)
+    VALUES (CONCAT('Se realizo una venta:', :NEW.ID_VENTA), NOW());
+END;
+/
+
+
+CREATE OR REPLACE TRIGGER USUARIO_Proyecto_Base_de_DatosLN
+AFTER DELETE ON USUARIOS
+FOR EACH ROW
+BEGIN
+    INSERT INTO Proyecto_Base_de_DatosLN (ACCION, FECHA)
+    VALUES (CONCAT('Se creÃ³ el departamento: ', NEW.nombre), NOW());
+END;
+/
 
 
 -- =========================
