@@ -407,6 +407,7 @@ INSERT INTO MARCAS (NOMBRE_MARCA) VALUES ('Aorus');
 -- =========================
 -- PERIFERICOS
 -- =========================
+SET DEFINE OFF;
 INSERT INTO PRODUCTOS (ID_CATEGORIA, ID_MARCA, NOMBRE, DESCRIPCION, PRECIO, STOCK, IMAGEN) VALUES (1, 1, 'Razer BlackWidow V4', 'Teclado mecanico RGB', 150, 15, 'https://www.techzilla.cr/wp-content/uploads/2024/02/1-22.jpg.webp');
 
 INSERT INTO PRODUCTOS (ID_CATEGORIA, ID_MARCA, NOMBRE, DESCRIPCION, PRECIO, STOCK, IMAGEN) VALUES (2, 3, 'Logitech G502', 'Mouse gamer alta precision', 80, 25, 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSDJQfsyLJjNpjHmgYCKX9CbwaeBW_3WnaY8A&s');
@@ -491,7 +492,7 @@ INSERT INTO PRODUCTOS (ID_CATEGORIA, ID_MARCA, NOMBRE, DESCRIPCION, PRECIO, STOC
 INSERT INTO PRODUCTOS (ID_CATEGORIA, ID_MARCA, NOMBRE, DESCRIPCION, PRECIO, STOCK, IMAGEN) VALUES (13, 26, 'Xiaomi Mi Router AX1800', 'Router WiFi 6 Dual Band', 85, 18, 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ4Jgdbdze_4TS6ihdqRT_EI-YZLYbJ09LsaA&s');
 
 INSERT INTO PRODUCTOS (ID_CATEGORIA, ID_MARCA, NOMBRE, DESCRIPCION, PRECIO, STOCK, IMAGEN) VALUES (13, 7, 'Huawei WiFi Mesh 7', 'Sistema Mesh WiFi', 180, 6, 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQveSkVJGYbhXRj584YiwgGc4IrAvpihYwFQA&s');
-
+SET DEFINE ON;
 COMMIT;
 
 SELECT * FROM PRODUCTOS;
