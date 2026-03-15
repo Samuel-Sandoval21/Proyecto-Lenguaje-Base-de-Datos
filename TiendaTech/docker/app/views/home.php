@@ -7,6 +7,7 @@ $sql = "SELECT
             p.DESCRIPCION,
             p.PRECIO,
             p.STOCK,
+            p.IMAGEN,
             m.NOMBRE_MARCA,
             c.NOMBRE_CATEGORIA
         FROM AdminProyecto.PRODUCTOS p
@@ -31,6 +32,12 @@ oci_execute($stid);
         padding:15px;
         box-shadow:0 2px 6px rgba(0,0,0,0.1);
     ">
+
+        <!-- Imagen -->
+        <img 
+            src="<?php echo $row['IMAGEN']; ?>" 
+            style="width:100%; height:150px; object-fit:contain; margin-bottom:10px;"
+        >
 
         <h3><?php echo $row['NOMBRE']; ?></h3>
 
