@@ -318,7 +318,7 @@ BEGIN
     INSERT INTO Proyecto_Base_de_DatosLN (ACCION, FECHA)
     VALUES (CONCAT('Se creó el departamento: ', NEW.nombre), NOW());
 END;
-/
+//
 
 
 -- =========================
