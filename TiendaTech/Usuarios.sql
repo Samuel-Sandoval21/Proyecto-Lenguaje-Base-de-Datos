@@ -3,7 +3,7 @@
 -- =========================
 
 CREATE USER AdminProyecto IDENTIFIED BY AdminProyecto2026#
-    DEFAULT TABLESPACE Proyecto_Base_de_DatosJN
+    DEFAULT TABLESPACE Proyecto_Base_de_DatosLN
     TEMPORARY TABLESPACE TEMP
     PROFILE perfil_admin
     ACCOUNT UNLOCK;
