@@ -1,16 +1,9 @@
-
 <?php
+$usuario = "Consulta";
+$pass = "Consulta2026#";
+$base_datos = "//host.docker.internal:1521/orcl";
 
-$conn = oci_connect(
-    "Consulta",
-    "Consulta2026#",
-    "(DESCRIPTION=
-        (ADDRESS=(PROTOCOL=TCP)(HOST=host.docker.internal)(PORT=1521))
-        (CONNECT_DATA=(SERVICE_NAME=ORCL))
-    )"
-);
+$conn = oci_connect($usuario, $pass, $base_datos, 'AL32UTF8');
 
-if (!$conn) {
-    $e = oci_error();
-    echo $e['message'];
-}
+
+?>

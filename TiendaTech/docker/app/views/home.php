@@ -7,11 +7,12 @@ $sql = "SELECT
             p.DESCRIPCION,
             p.PRECIO,
             p.STOCK,
+            p.IMAGEN,
             m.NOMBRE_MARCA,
             c.NOMBRE_CATEGORIA
-        FROM PRODUCTOS p
-        JOIN MARCAS m ON p.ID_MARCA = m.ID_MARCA
-        JOIN CATEGORIAS c ON p.ID_CATEGORIA = c.ID_CATEGORIA
+        FROM AdminProyecto.PRODUCTOS p
+        JOIN AdminProyecto.MARCAS m ON p.ID_MARCA = m.ID_MARCA
+        JOIN AdminProyecto.CATEGORIAS c ON p.ID_CATEGORIA = c.ID_CATEGORIA
         ORDER BY p.NOMBRE";
 
 $stid = oci_parse($conn, $sql);
@@ -20,11 +21,23 @@ oci_execute($stid);
 
 <h1>Productos disponibles</h1>
 
-<div class="productos">
+<div style="display:grid; grid-template-columns:repeat(5,1fr); gap:20px;">
 
 <?php while ($row = oci_fetch_assoc($stid)) { ?>
 
-    <div class="producto-card">
+    <div style="
+        background:white;
+        border:1px solid #ddd;
+        border-radius:8px;
+        padding:15px;
+        box-shadow:0 2px 6px rgba(0,0,0,0.1);
+    ">
+
+        <!-- Imagen -->
+        <img 
+            src="<?php echo $row['IMAGEN']; ?>" 
+            style="width:100%; height:150px; object-fit:contain; margin-bottom:10px;"
+        >
 
         <h3><?php echo $row['NOMBRE']; ?></h3>
 
@@ -34,9 +47,13 @@ oci_execute($stid);
 
         <p><strong>Categoría:</strong> <?php echo $row['NOMBRE_CATEGORIA']; ?></p>
 
-        <p class="precio">$<?php echo $row['PRECIO']; ?></p>
+        <p style="font-weight:bold; color:#1a73e8;">
+            $<?php echo $row['PRECIO']; ?>
+        </p>
 
-        <p class="stock">Stock: <?php echo $row['STOCK']; ?></p>
+        <p style="color:#555;">
+            Stock: <?php echo $row['STOCK']; ?>
+        </p>
 
     </div>
 

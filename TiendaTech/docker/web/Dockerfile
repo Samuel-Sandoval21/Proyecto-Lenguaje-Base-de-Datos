@@ -3,29 +3,32 @@ FROM php:8.2-apache
 RUN apt-get update && apt-get install -y \
     unzip \
     wget \
-    libaio-dev \
     build-essential \
-    autoconf
+    autoconf \
+    && echo "deb http://deb.debian.org/debian bookworm main" >> /etc/apt/sources.list \
+    && apt-get update \
+    && apt-get install -y libaio1 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/oracle
 
-# Descargar instant client
-RUN wget https://download.oracle.com/otn_software/linux/instantclient/2112000/instantclient-basiclite-linux.x64-21.12.0.0.0dbru.zip \
- && wget https://download.oracle.com/otn_software/linux/instantclient/2112000/instantclient-sdk-linux.x64-21.12.0.0.0dbru.zip
-
-RUN unzip instantclient-basiclite-linux.x64-21.12.0.0.0dbru.zip \
- && unzip instantclient-sdk-linux.x64-21.12.0.0.0dbru.zip \
+# Descargar Oracle Instant Client
+RUN wget -q https://download.oracle.com/otn_software/linux/instantclient/2112000/instantclient-basiclite-linux.x64-21.12.0.0.0dbru.zip \
+ && wget -q https://download.oracle.com/otn_software/linux/instantclient/2112000/instantclient-sdk-linux.x64-21.12.0.0.0dbru.zip \
+ && unzip -q instantclient-basiclite-linux.x64-21.12.0.0.0dbru.zip \
+ && unzip -q instantclient-sdk-linux.x64-21.12.0.0.0dbru.zip \
  && rm *.zip
+
+# Registrar librerías
+RUN echo /opt/oracle/instantclient_21_12 > /etc/ld.so.conf.d/oracle.conf && ldconfig
 
 ENV LD_LIBRARY_PATH=/opt/oracle/instantclient_21_12
 
-# Copiar OCI8 descargado
-COPY oci8-3.3.0 /tmp/oci8
-
-# Compilar OCI8 manualmente
-RUN cd /tmp/oci8 \
- && phpize \
- && ./configure --with-oci8=instantclient,/opt/oracle/instantclient_21_12 \
- && make \
- && make install \
+# Instalar OCI8
+RUN echo "instantclient,/opt/oracle/instantclient_21_12" | pecl install oci8 \
  && docker-php-ext-enable oci8
+
+# Verificar que OCI8 quedó activo
+RUN php -m | grep oci
+
+COPY . /var/www/html/
