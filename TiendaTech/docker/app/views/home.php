@@ -54,6 +54,13 @@ oci_execute($stid);
         <p style="color:#555;">
             Stock: <?php echo $row['STOCK']; ?>
         </p>
+        
+        <a href="index.php?page=productos">Ver todos los productos</a>
+
+        <a href="index.php?page=producto&id=<?php echo $row['ID_PRODUCTO']; ?>">
+
+        Ver producto
+    </a>
 
     </div>
 
