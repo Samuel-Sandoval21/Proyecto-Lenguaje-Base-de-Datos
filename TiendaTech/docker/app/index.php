@@ -14,9 +14,9 @@ switch($pagina){
         $pageTitle = "Buscar";
     break;
     
-    case 'productos':
-        $view = 'views/productos.php';
-        $pageTitle = "Productos";
+    case 'producto':
+        $view = 'views/producto.php';
+        $pageTitle = "Producto";
     break;
 
     default:

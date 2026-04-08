@@ -24,9 +24,11 @@
     <!-- Barra principal -->
     <div class="topbar">
 
-        <div class="logo">
+    <div class="logo">
+        <a href="index.php" style="text-decoration: none; color: inherit;">
             TiendaTech
-        </div>
+        </a>
+    </div>
 
         <div class="search">
             <form method="GET" action="index.php">
@@ -96,7 +98,7 @@
 
                                 <li>
                                     <a class="dropdown-item"
-                                        href="index.php?page=buscar&categoria=<?php echo $cat['ID_CATEGORIA']; ?>">
+                                        href="index.php?page=categorias&categoria=<?php echo $cat['ID_CATEGORIA']; ?>">
                                         <?php echo $cat['NOMBRE_CATEGORIA']; ?>
                                     </a>
                                 </li>

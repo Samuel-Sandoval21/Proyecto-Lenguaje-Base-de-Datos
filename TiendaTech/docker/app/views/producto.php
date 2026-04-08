@@ -67,10 +67,6 @@ if ($id) {
                 <?php echo $producto['NOMBRE']; ?>
             </h1>
 
-            <p style="font-size:20px; color:#555; margin:0;">
-                <strong>Categoría:</strong> <?php echo $producto['NOMBRE_CATEGORIA']; ?>
-            </p>
-
             <p style="font-size:18px; margin:0;">
                 <?php echo $producto['DESCRIPCION']; ?>
             </p>
@@ -115,9 +111,18 @@ if ($id) {
     $sql_rel = "SELECT 
                     p.ID_PRODUCTO,
                     p.NOMBRE,
+                    p.DESCRIPCION,
                     p.PRECIO,
-                    p.IMAGEN
+                    p.STOCK,
+                    p.IMAGEN,
+                    p.ID_CATEGORIA,
+                    m.NOMBRE_MARCA,
+                    c.NOMBRE_CATEGORIA
                 FROM AdminProyecto.PRODUCTOS p
+                JOIN AdminProyecto.MARCAS m 
+                    ON p.ID_MARCA = m.ID_MARCA
+                JOIN AdminProyecto.CATEGORIAS c 
+                    ON p.ID_CATEGORIA = c.ID_CATEGORIA
                 WHERE p.ID_CATEGORIA = :categoria
                 AND p.ID_PRODUCTO != :id
                 ORDER BY p.NOMBRE";
@@ -141,36 +146,11 @@ if ($id) {
         margin-top:20px;
     ">
 
-    <?php while ($rel = oci_fetch_assoc($stid_rel)) { ?>
-
-        <a href="?page=productos&id=<?php echo $rel['ID_PRODUCTO']; ?>" style="text-decoration:none; color:black;">
-
-            <div style="
-                background:white;
-                padding:15px;
-                border-radius:10px;
-                box-shadow:0 2px 6px rgba(0,0,0,0.1);
-                transition:0.3s;
-            "
-            onmouseover="this.style.transform='scale(1.05)'"
-            onmouseout="this.style.transform='scale(1)'">
-
-                <img 
-                    src="<?php echo $rel['IMAGEN']; ?>" 
-                    style="width:100%; height:120px; object-fit:contain;"
-                >
-
-                <h4><?php echo $rel['NOMBRE']; ?></h4>
-
-                <p style="color:#1a73e8; font-weight:bold;">
-                    $<?php echo $rel['PRECIO']; ?>
-                </p>
-
-            </div>
-
-        </a>
-
-    <?php } ?>
+    <?php
+    while ($row = oci_fetch_assoc($stid_rel)) {
+        include __DIR__ . '/components/info_producto.php';
+    }
+    ?>
 
     </div>
 
