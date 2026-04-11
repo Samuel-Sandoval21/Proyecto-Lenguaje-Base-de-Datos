@@ -1,0 +1,58 @@
+
+----Primer Excepcion - Trigger TRG_VALIDAR_STOCK
+DECLARE
+    v_stock NUMBER;
+    VID NUMBER := &v;
+BEGIN
+    SELECT STOCK
+    INTO v_stock
+    FROM PRODUCTOS
+    WHERE ID_PRODUCTO = VID;
+
+    DBMS_OUTPUT.PUT_LINE('Producto: ' || v_stock);
+
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('ERROR: PRODUCTO NO EXISTE');
+END;
+/
+
+
+----Segunda Excepcion - TRG_CALCULAR_TOTAL
+DECLARE
+    v_total NUMBER;
+    VID NUMBER := &v;
+BEGIN
+    SELECT SUM(CANTIDAD * PRECIO_UNITARIO)
+    INTO v_total
+    FROM DETALLE_VENTA
+    WHERE ID_VENTA = VID;
+
+    DBMS_OUTPUT.PUT_LINE('TOTAL ACTUALIZADO: ' || v_total);
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('ERROR: LA VENTA NO EXISTE');
+END;
+/
+
+
+----Tercer trigger - funtion TOTAL_COMPRADO_CLIENTE
+DECLARE
+    v_total NUMBER;
+    VNOM VARCHAR2(100);
+    VID NUMBER := &v;
+BEGIN
+    SELECT NOMBRE
+    INTO VNOM
+    FROM CLIENTES
+    WHERE ID_CLIENTE = VID;
+
+    DBMS_OUTPUT.PUT_LINE('TOTAL Comprado: ' || v_total);
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('ERROR: lo comprado no existe');
+END;
+/
