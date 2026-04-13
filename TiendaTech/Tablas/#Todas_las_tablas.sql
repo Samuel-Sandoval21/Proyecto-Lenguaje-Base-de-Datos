@@ -554,7 +554,7 @@ GRANT SELECT ON AdminProyecto.CATEGORIAS TO Consulta;
 
 GRANT SELECT ON AdminProyecto.DETALLE_VENTAS TO Consulta;
 
-GRANT SELECT ON AdminProyecto.VENTA TO Consulta;
+GRANT SELECT ON AdminProyecto.VENTAS TO Consulta;
 
 GRANT SELECT ON AdminProyecto.PRODUCTO_ATRIBUTOS TO Consulta;
 
