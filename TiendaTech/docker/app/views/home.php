@@ -1,62 +1,53 @@
-<?php
+<?php /* home.php */
 require_once __DIR__ . '/../config/db.php';
-
-$sql = "SELECT 
-            p.ID_PRODUCTO,
-            p.NOMBRE,
-            p.DESCRIPCION,
-            p.PRECIO,
-            p.STOCK,
-            p.IMAGEN,
-            m.NOMBRE_MARCA,
-            c.NOMBRE_CATEGORIA
-        FROM AdminProyecto.PRODUCTOS p
-        JOIN AdminProyecto.MARCAS m ON p.ID_MARCA = m.ID_MARCA
-        JOIN AdminProyecto.CATEGORIAS c ON p.ID_CATEGORIA = c.ID_CATEGORIA
-        ORDER BY p.NOMBRE";
-
+require_once __DIR__ . '/../models/ProductoModel.php';
+require_once __DIR__ . '/../models/DetalleVentaModel.php';
+ 
+/* ── TOP 6 MÁS VENDIDOS ──────────── */
+$sqlMasVendidos  = getBaseDetalleVentaSQL();
+$stidMasVendidos = oci_parse($conn, $sqlMasVendidos);
+oci_execute($stidMasVendidos);
+$topVendidos = [];
+while ($r = oci_fetch_assoc($stidMasVendidos)) $topVendidos[] = $r;
+ 
+/* ── TODOS LOS PRODUCTOS ─────────── */
+$sql  = getBaseProductosSQL() . " ORDER BY p.NOMBRE";
 $stid = oci_parse($conn, $sql);
 oci_execute($stid);
+$productos = [];
+while ($r = oci_fetch_assoc($stid)) $productos[] = $r;
 ?>
-
-<h1>Productos disponibles</h1>
-
-<div style="display:grid; grid-template-columns:repeat(5,1fr); gap:20px;">
-
-<?php while ($row = oci_fetch_assoc($stid)) { ?>
-
-    <div style="
-        background:white;
-        border:1px solid #ddd;
-        border-radius:8px;
-        padding:15px;
-        box-shadow:0 2px 6px rgba(0,0,0,0.1);
-    ">
-
-        <!-- Imagen -->
-        <img 
-            src="<?php echo $row['IMAGEN']; ?>" 
-            style="width:100%; height:150px; object-fit:contain; margin-bottom:10px;"
-        >
-
-        <h3><?php echo $row['NOMBRE']; ?></h3>
-
-        <p><?php echo $row['DESCRIPCION']; ?></p>
-
-        <p><strong>Marca:</strong> <?php echo $row['NOMBRE_MARCA']; ?></p>
-
-        <p><strong>Categoría:</strong> <?php echo $row['NOMBRE_CATEGORIA']; ?></p>
-
-        <p style="font-weight:bold; color:#1a73e8;">
-            $<?php echo $row['PRECIO']; ?>
-        </p>
-
-        <p style="color:#555;">
-            Stock: <?php echo $row['STOCK']; ?>
-        </p>
-
+ 
+<!-- =========================
+     TOP 6 MÁS VENDIDOS — CAROUSEL
+========================= -->
+<div class="sub-container">
+    <h1>🔥 Top 6 más vendidos</h1>
+ 
+    <div class="carousel-container">
+        <button class="carousel-btn left" id="btnLeft">‹</button>
+ 
+        <div class="carousel" id="carousel">
+            <?php foreach ($topVendidos as $row): ?>
+                <div class="carousel-item">
+                    <?php include __DIR__ . '/components/info_producto.php'; ?>
+                </div>
+            <?php endforeach; ?>
+        </div>
+ 
+        <button class="carousel-btn right" id="btnRight">›</button>
     </div>
-
-<?php } ?>
-
+</div>
+ 
+<!-- =========================
+     PRODUCTOS DISPONIBLES
+========================= -->
+<div class="main-container">
+    <h1 class="titulo-seccion">Productos disponibles</h1>
+ 
+    <div class="productos-grid">
+        <?php foreach ($productos as $row): ?>
+            <?php include __DIR__ . '/components/info_producto.php'; ?>
+        <?php endforeach; ?>
+    </div>
 </div>

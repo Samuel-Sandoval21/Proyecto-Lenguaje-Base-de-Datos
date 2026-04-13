@@ -13,6 +13,11 @@ switch($pagina){
         $view = 'views/busqueda.php';
         $pageTitle = "Buscar";
     break;
+    
+    case 'producto':
+        $view = 'views/producto.php';
+        $pageTitle = "Producto";
+    break;
 
     default:
         $view = 'views/home.php';
