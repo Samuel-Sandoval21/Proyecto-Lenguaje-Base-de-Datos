@@ -5,7 +5,7 @@ function getBaseDetalleVentaSQL(): string {
     return "SELECT 
                 base.*,
                 SUM(v.CANTIDAD) AS TOTAL_VENDIDO
-            FROM AdminProyecto.VENTA v
+            FROM AdminProyecto.VENTAS v
             JOIN (" . getBaseProductosSQL() . ") base
                 ON v.ID_PRODUCTO = base.ID_PRODUCTO
             GROUP BY
