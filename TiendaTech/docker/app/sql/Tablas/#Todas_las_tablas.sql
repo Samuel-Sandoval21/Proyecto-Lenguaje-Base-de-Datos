@@ -291,6 +291,25 @@ CREATE TABLE DIRECCIONES (
         ON DELETE CASCADE     
 );
 
+CREATE TABLE CARRITO (
+    ID_CARRITO    NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ID_USUARIO    NUMBER NOT NULL,
+    ID_PRODUCTO   NUMBER NOT NULL,
+    CANTIDAD      NUMBER DEFAULT 1 NOT NULL CHECK (CANTIDAD > 0),
+    FECHA_AGREGADO DATE DEFAULT SYSDATE,
+    CONSTRAINT FK_CARRITO_USUARIO
+        FOREIGN KEY (ID_USUARIO)
+        REFERENCES USUARIOS(ID_USUARIO)
+        ON DELETE CASCADE,
+    CONSTRAINT FK_CARRITO_PRODUCTO
+        FOREIGN KEY (ID_PRODUCTO)
+        REFERENCES PRODUCTOS(ID_PRODUCTO)
+        ON DELETE CASCADE,
+    -- Un usuario no puede tener el mismo producto duplicado
+    CONSTRAINT UK_CARRITO_USUARIO_PRODUCTO
+        UNIQUE (ID_USUARIO, ID_PRODUCTO)
+);
+
 CREATE TABLE AUDITORIA_SISTEMA (
     ID_AUDITORIA NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     TABLA_AFECTADA VARCHAR2(50),
@@ -304,7 +323,7 @@ CREATE TABLE AUDITORIA_SISTEMA (
 );
 
 
-
+SELECT * FROM AUDITORIA_SISTEMA;
 
 -- =========================
 -- TRIGGERS
@@ -357,94 +376,638 @@ END;
 -- =========================
 -- Crea auditoria para las tablas mas importantes 
 
--- AUDITORIA TABLA VENTAS
-CREATE OR REPLACE TRIGGER TRG_AUD_PRODUCTOS
-AFTER UPDATE OR INSERT OR DELETE ON PRODUCTOS
+-- =========================================
+-- AUDITORIA TABLA CATEGORIAS
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_CATEGORIAS
+AFTER INSERT OR UPDATE OR DELETE ON CATEGORIAS
 FOR EACH ROW
 BEGIN
--- INSERT
-IF INSERTING THEN
-INSERT INTO AUDITORIA_SISTEMA
-(TABLA_AFECTADA,OPERACION,ID_REGISTRO,USUARIO_DB)
-VALUES
-('PRODUCTOS','INSERT',:NEW.ID_PRODUCTO,USER);
-END IF;
--- DELETE
-IF DELETING THEN
-INSERT INTO AUDITORIA_SISTEMA
-(TABLA_AFECTADA,OPERACION,ID_REGISTRO,USUARIO_DB)
-VALUES
-('PRODUCTOS','DELETE',:OLD.ID_PRODUCTO,USER);
-END IF;
--- UPDATE PRECIO
-IF UPDATING AND :OLD.PRECIO <> :NEW.PRECIO THEN
-INSERT INTO AUDITORIA_SISTEMA
-(TABLA_AFECTADA,OPERACION,ID_REGISTRO,CAMPO_MODIFICADO,VALOR_ANTERIOR,VALOR_NUEVO,USUARIO_DB)
-VALUES
-('PRODUCTOS','UPDATE',:NEW.ID_PRODUCTO,'PRECIO',:OLD.PRECIO,:NEW.PRECIO,USER);
-END IF;
--- UPDATE STOCK
-IF UPDATING AND :OLD.STOCK <> :NEW.STOCK THEN
-INSERT INTO AUDITORIA_SISTEMA
-(TABLA_AFECTADA,OPERACION,ID_REGISTRO,CAMPO_MODIFICADO,VALOR_ANTERIOR,VALOR_NUEVO,USUARIO_DB)
-VALUES
-('PRODUCTOS','UPDATE',:NEW.ID_PRODUCTO,'STOCK',:OLD.STOCK,:NEW.STOCK,USER);
-END IF;
--- UPDATE NOMBRE
-IF UPDATING AND :OLD.NOMBRE <> :NEW.NOMBRE THEN
-INSERT INTO AUDITORIA_SISTEMA
-(TABLA_AFECTADA,OPERACION,ID_REGISTRO,CAMPO_MODIFICADO,VALOR_ANTERIOR,VALOR_NUEVO,USUARIO_DB)
-VALUES
-('PRODUCTOS','UPDATE',:NEW.ID_PRODUCTO,'NOMBRE',:OLD.NOMBRE,:NEW.NOMBRE,USER);
-END IF;
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('CATEGORIAS', 'INSERT', :NEW.ID_CATEGORIA, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('CATEGORIAS', 'DELETE', :OLD.ID_CATEGORIA, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.NOMBRE_CATEGORIA <> :NEW.NOMBRE_CATEGORIA THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('CATEGORIAS', 'UPDATE', :NEW.ID_CATEGORIA, 'NOMBRE_CATEGORIA', :OLD.NOMBRE_CATEGORIA, :NEW.NOMBRE_CATEGORIA, USER);
+        END IF;
+
+        IF :OLD.TIPO_GENERAL <> :NEW.TIPO_GENERAL THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('CATEGORIAS', 'UPDATE', :NEW.ID_CATEGORIA, 'TIPO_GENERAL', :OLD.TIPO_GENERAL, :NEW.TIPO_GENERAL, USER);
+        END IF;
+
+    END IF;
 
 END;
+/
 
 
+-- =========================================
+-- AUDITORIA TABLA MARCAS
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_MARCAS
+AFTER INSERT OR UPDATE OR DELETE ON MARCAS
+FOR EACH ROW
+BEGIN
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('MARCAS', 'INSERT', :NEW.ID_MARCA, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('MARCAS', 'DELETE', :OLD.ID_MARCA, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.NOMBRE_MARCA <> :NEW.NOMBRE_MARCA THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('MARCAS', 'UPDATE', :NEW.ID_MARCA, 'NOMBRE_MARCA', :OLD.NOMBRE_MARCA, :NEW.NOMBRE_MARCA, USER);
+        END IF;
+
+    END IF;
+
+END;
+/
+
+
+-- =========================================
+-- AUDITORIA TABLA METODOS_PAGO
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_METODOS_PAGO
+AFTER INSERT OR UPDATE OR DELETE ON METODOS_PAGO
+FOR EACH ROW
+BEGIN
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('METODOS_PAGO', 'INSERT', :NEW.ID_METODO, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('METODOS_PAGO', 'DELETE', :OLD.ID_METODO, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.NOMBRE <> :NEW.NOMBRE THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('METODOS_PAGO', 'UPDATE', :NEW.ID_METODO, 'NOMBRE', :OLD.NOMBRE, :NEW.NOMBRE, USER);
+        END IF;
+
+    END IF;
+
+END;
+/
+
+
+-- =========================================
+-- AUDITORIA TABLA PROVEEDORES
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_PROVEEDORES
+AFTER INSERT OR UPDATE OR DELETE ON PROVEEDORES
+FOR EACH ROW
+BEGIN
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('PROVEEDORES', 'INSERT', :NEW.ID_PROVEEDOR, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('PROVEEDORES', 'DELETE', :OLD.ID_PROVEEDOR, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.NOMBRE <> :NEW.NOMBRE THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('PROVEEDORES', 'UPDATE', :NEW.ID_PROVEEDOR, 'NOMBRE', :OLD.NOMBRE, :NEW.NOMBRE, USER);
+        END IF;
+
+        IF :OLD.CORREO <> :NEW.CORREO THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('PROVEEDORES', 'UPDATE', :NEW.ID_PROVEEDOR, 'CORREO', :OLD.CORREO, :NEW.CORREO, USER);
+        END IF;
+
+    END IF;
+
+END;
+/
+
+
+-- =========================================
+-- AUDITORIA TABLA TELEFONOS
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_TELEFONOS
+AFTER INSERT OR UPDATE OR DELETE ON TELEFONOS
+FOR EACH ROW
+BEGIN
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('TELEFONOS', 'INSERT', :NEW.ID_TELEFONO, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('TELEFONOS', 'DELETE', :OLD.ID_TELEFONO, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.TELEFONO <> :NEW.TELEFONO THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('TELEFONOS', 'UPDATE', :NEW.ID_TELEFONO, 'TELEFONO', :OLD.TELEFONO, :NEW.TELEFONO, USER);
+        END IF;
+
+        IF :OLD.ID_CLIENTE <> :NEW.ID_CLIENTE THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('TELEFONOS', 'UPDATE', :NEW.ID_TELEFONO, 'ID_CLIENTE', TO_CHAR(:OLD.ID_CLIENTE), TO_CHAR(:NEW.ID_CLIENTE), USER);
+        END IF;
+
+    END IF;
+
+END;
+/
+
+
+-- =========================================
+-- AUDITORIA TABLA TELEFONOS_PROVEEDOR
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_TELEFONOS_PROVEEDOR
+AFTER INSERT OR UPDATE OR DELETE ON TELEFONOS_PROVEEDOR
+FOR EACH ROW
+BEGIN
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('TELEFONOS_PROVEEDOR', 'INSERT', :NEW.ID_TELEFONO, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('TELEFONOS_PROVEEDOR', 'DELETE', :OLD.ID_TELEFONO, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.TELEFONO <> :NEW.TELEFONO THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('TELEFONOS_PROVEEDOR', 'UPDATE', :NEW.ID_TELEFONO, 'TELEFONO', :OLD.TELEFONO, :NEW.TELEFONO, USER);
+        END IF;
+
+        IF :OLD.ID_PROVEEDOR <> :NEW.ID_PROVEEDOR THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('TELEFONOS_PROVEEDOR', 'UPDATE', :NEW.ID_TELEFONO, 'ID_PROVEEDOR', TO_CHAR(:OLD.ID_PROVEEDOR), TO_CHAR(:NEW.ID_PROVEEDOR), USER);
+        END IF;
+
+    END IF;
+
+END;
+/
+
+
+-- =========================================
+-- AUDITORIA TABLA CORREOS
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_CORREOS
+AFTER INSERT OR UPDATE OR DELETE ON CORREOS
+FOR EACH ROW
+BEGIN
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('CORREOS', 'INSERT', :NEW.ID_CORREO, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('CORREOS', 'DELETE', :OLD.ID_CORREO, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.CORREO <> :NEW.CORREO THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('CORREOS', 'UPDATE', :NEW.ID_CORREO, 'CORREO', :OLD.CORREO, :NEW.CORREO, USER);
+        END IF;
+
+        IF :OLD.ID_CLIENTE <> :NEW.ID_CLIENTE THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('CORREOS', 'UPDATE', :NEW.ID_CORREO, 'ID_CLIENTE', TO_CHAR(:OLD.ID_CLIENTE), TO_CHAR(:NEW.ID_CLIENTE), USER);
+        END IF;
+
+    END IF;
+
+END;
+/
+
+
+-- =========================================
+-- AUDITORIA TABLA DIRECCIONES
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_DIRECCIONES
+AFTER INSERT OR UPDATE OR DELETE ON DIRECCIONES
+FOR EACH ROW
+BEGIN
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('DIRECCIONES', 'INSERT', :NEW.ID_DIRECCION, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('DIRECCIONES', 'DELETE', :OLD.ID_DIRECCION, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.DIRECCION <> :NEW.DIRECCION THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('DIRECCIONES', 'UPDATE', :NEW.ID_DIRECCION, 'DIRECCION', :OLD.DIRECCION, :NEW.DIRECCION, USER);
+        END IF;
+
+        IF :OLD.ID_CLIENTE <> :NEW.ID_CLIENTE THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('DIRECCIONES', 'UPDATE', :NEW.ID_DIRECCION, 'ID_CLIENTE', TO_CHAR(:OLD.ID_CLIENTE), TO_CHAR(:NEW.ID_CLIENTE), USER);
+        END IF;
+
+    END IF;
+
+END;
+/
+
+
+-- =========================================
+-- AUDITORIA TABLA USUARIOS
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_USUARIOS
+AFTER INSERT OR UPDATE OR DELETE ON USUARIOS
+FOR EACH ROW
+BEGIN
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('USUARIOS', 'INSERT', :NEW.ID_USUARIO, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('USUARIOS', 'DELETE', :OLD.ID_USUARIO, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.USERNAME <> :NEW.USERNAME THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('USUARIOS', 'UPDATE', :NEW.ID_USUARIO, 'USERNAME', :OLD.USERNAME, :NEW.USERNAME, USER);
+        END IF;
+
+        -- Se audita el cambio de password pero sin guardar el valor real por seguridad
+        IF :OLD.PASSWORD <> :NEW.PASSWORD THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('USUARIOS', 'UPDATE', :NEW.ID_USUARIO, 'PASSWORD', '********', '********', USER);
+        END IF;
+
+        IF :OLD.ROL <> :NEW.ROL THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('USUARIOS', 'UPDATE', :NEW.ID_USUARIO, 'ROL', :OLD.ROL, :NEW.ROL, USER);
+        END IF;
+
+    END IF;
+
+END;
+/
+
+
+-- =========================================
+-- AUDITORIA TABLA PRODUCTO_ATRIBUTOS
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_PRODUCTO_ATRIBUTOS
+AFTER INSERT OR UPDATE OR DELETE ON PRODUCTO_ATRIBUTOS
+FOR EACH ROW
+BEGIN
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('PRODUCTO_ATRIBUTOS', 'INSERT', :NEW.ID_ATRIBUTO, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('PRODUCTO_ATRIBUTOS', 'DELETE', :OLD.ID_ATRIBUTO, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.NOMBRE_ATRIBUTO <> :NEW.NOMBRE_ATRIBUTO THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('PRODUCTO_ATRIBUTOS', 'UPDATE', :NEW.ID_ATRIBUTO, 'NOMBRE_ATRIBUTO', :OLD.NOMBRE_ATRIBUTO, :NEW.NOMBRE_ATRIBUTO, USER);
+        END IF;
+
+        IF :OLD.VALOR <> :NEW.VALOR THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('PRODUCTO_ATRIBUTOS', 'UPDATE', :NEW.ID_ATRIBUTO, 'VALOR', :OLD.VALOR, :NEW.VALOR, USER);
+        END IF;
+
+    END IF;
+
+END;
+/
+
+
+-- =========================================
+-- AUDITORIA TABLA CARRITO
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_CARRITO
+AFTER INSERT OR UPDATE OR DELETE ON CARRITO
+FOR EACH ROW
+BEGIN
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('CARRITO', 'INSERT', :NEW.ID_CARRITO, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('CARRITO', 'DELETE', :OLD.ID_CARRITO, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.CANTIDAD <> :NEW.CANTIDAD THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('CARRITO', 'UPDATE', :NEW.ID_CARRITO, 'CANTIDAD', TO_CHAR(:OLD.CANTIDAD), TO_CHAR(:NEW.CANTIDAD), USER);
+        END IF;
+
+        IF :OLD.ID_PRODUCTO <> :NEW.ID_PRODUCTO THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('CARRITO', 'UPDATE', :NEW.ID_CARRITO, 'ID_PRODUCTO', TO_CHAR(:OLD.ID_PRODUCTO), TO_CHAR(:NEW.ID_PRODUCTO), USER);
+        END IF;
+
+    END IF;
+
+END;
+/
+-- =========================================
+-- AUDITORIA TABLA PRODUCTOS
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_PRODUCTOS
+AFTER INSERT OR UPDATE OR DELETE ON PRODUCTOS
+FOR EACH ROW
+BEGIN
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('PRODUCTOS', 'INSERT', :NEW.ID_PRODUCTO, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('PRODUCTOS', 'DELETE', :OLD.ID_PRODUCTO, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.PRECIO <> :NEW.PRECIO THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('PRODUCTOS', 'UPDATE', :NEW.ID_PRODUCTO, 'PRECIO', TO_CHAR(:OLD.PRECIO), TO_CHAR(:NEW.PRECIO), USER);
+        END IF;
+
+        IF :OLD.STOCK <> :NEW.STOCK THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('PRODUCTOS', 'UPDATE', :NEW.ID_PRODUCTO, 'STOCK', TO_CHAR(:OLD.STOCK), TO_CHAR(:NEW.STOCK), USER);
+        END IF;
+
+        IF :OLD.NOMBRE <> :NEW.NOMBRE THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('PRODUCTOS', 'UPDATE', :NEW.ID_PRODUCTO, 'NOMBRE', :OLD.NOMBRE, :NEW.NOMBRE, USER);
+        END IF;
+
+    END IF;
+
+END;
+/
+
+-- =========================================
+-- AUDITORIA TABLA DETALLE_VENTAS
+-- =========================================
+CREATE OR REPLACE TRIGGER TRG_AUD_DETALLE_VENTAS
+AFTER INSERT OR UPDATE OR DELETE ON DETALLE_VENTAS
+FOR EACH ROW
+BEGIN
+
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('DETALLE_VENTAS', 'INSERT', :NEW.ID_DETALLE, USER);
+
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('DETALLE_VENTAS', 'DELETE', :OLD.ID_DETALLE, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.ID_CLIENTE <> :NEW.ID_CLIENTE THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('DETALLE_VENTAS', 'UPDATE', :NEW.ID_DETALLE, 'ID_CLIENTE', TO_CHAR(:OLD.ID_CLIENTE), TO_CHAR(:NEW.ID_CLIENTE), USER);
+        END IF;
+
+        IF :OLD.ID_METODO <> :NEW.ID_METODO THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('DETALLE_VENTAS', 'UPDATE', :NEW.ID_DETALLE, 'ID_METODO', TO_CHAR(:OLD.ID_METODO), TO_CHAR(:NEW.ID_METODO), USER);
+        END IF;
+
+        IF :OLD.FECHA_VENTA <> :NEW.FECHA_VENTA THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('DETALLE_VENTAS', 'UPDATE', :NEW.ID_DETALLE, 'FECHA_VENTA', TO_CHAR(:OLD.FECHA_VENTA, 'DD/MM/YYYY'), TO_CHAR(:NEW.FECHA_VENTA, 'DD/MM/YYYY'), USER);
+        END IF;
+
+    END IF;
+
+END;
+/
+
+-- =========================================
 -- AUDITORIA TABLA VENTAS
+-- =========================================
 CREATE OR REPLACE TRIGGER TRG_AUD_VENTAS
 AFTER INSERT OR UPDATE OR DELETE ON VENTAS
 FOR EACH ROW
 BEGIN
 
-IF INSERTING THEN
-INSERT INTO AUDITORIA_SISTEMA
-(TABLA_AFECTADA,OPERACION,ID_REGISTRO,USUARIO_DB)
-VALUES
-('VENTAS','INSERT',:NEW.ID_VENTA,USER);
-END IF;
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('VENTAS', 'INSERT', :NEW.ID_VENTA, USER);
 
-IF DELETING THEN
-INSERT INTO AUDITORIA_SISTEMA
-(TABLA_AFECTADA,OPERACION,ID_REGISTRO,USUARIO_DB)
-VALUES
-('VENTAS','DELETE',:OLD.ID_VENTA,USER);
-END IF;
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('VENTAS', 'DELETE', :OLD.ID_VENTA, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.CANTIDAD <> :NEW.CANTIDAD THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('VENTAS', 'UPDATE', :NEW.ID_VENTA, 'CANTIDAD', TO_CHAR(:OLD.CANTIDAD), TO_CHAR(:NEW.CANTIDAD), USER);
+        END IF;
+
+        IF :OLD.PRECIO_UNITARIO <> :NEW.PRECIO_UNITARIO THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('VENTAS', 'UPDATE', :NEW.ID_VENTA, 'PRECIO_UNITARIO', TO_CHAR(:OLD.PRECIO_UNITARIO), TO_CHAR(:NEW.PRECIO_UNITARIO), USER);
+        END IF;
+
+    END IF;
 
 END;
+/
 
+
+-- =========================================
 -- AUDITORIA TABLA CLIENTES
+-- =========================================
 CREATE OR REPLACE TRIGGER TRG_AUD_CLIENTES
 AFTER INSERT OR UPDATE OR DELETE ON CLIENTES
 FOR EACH ROW
 BEGIN
 
-IF INSERTING THEN
-INSERT INTO AUDITORIA_SISTEMA
-(TABLA_AFECTADA,OPERACION,ID_REGISTRO,USUARIO_DB)
-VALUES
-('CLIENTES','INSERT',:NEW.ID_CLIENTE,USER);
-END IF;
+    IF INSERTING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('CLIENTES', 'INSERT', :NEW.ID_CLIENTE, USER);
 
-IF DELETING THEN
-INSERT INTO AUDITORIA_SISTEMA
-(TABLA_AFECTADA,OPERACION,ID_REGISTRO,USUARIO_DB)
-VALUES
-('CLIENTES','DELETE',:OLD.ID_CLIENTE,USER);
-END IF;
+    ELSIF DELETING THEN
+        INSERT INTO AUDITORIA_SISTEMA
+            (TABLA_AFECTADA, OPERACION, ID_REGISTRO, USUARIO_DB)
+        VALUES
+            ('CLIENTES', 'DELETE', :OLD.ID_CLIENTE, USER);
+
+    ELSIF UPDATING THEN
+
+        IF :OLD.NOMBRE <> :NEW.NOMBRE THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('CLIENTES', 'UPDATE', :NEW.ID_CLIENTE, 'NOMBRE', :OLD.NOMBRE, :NEW.NOMBRE, USER);
+        END IF;
+
+        IF :OLD.APELLIDO <> :NEW.APELLIDO THEN
+            INSERT INTO AUDITORIA_SISTEMA
+                (TABLA_AFECTADA, OPERACION, ID_REGISTRO, CAMPO_MODIFICADO, VALOR_ANTERIOR, VALOR_NUEVO, USUARIO_DB)
+            VALUES
+                ('CLIENTES', 'UPDATE', :NEW.ID_CLIENTE, 'APELLIDO', :OLD.APELLIDO, :NEW.APELLIDO, USER);
+        END IF;
+
+    END IF;
 
 END;
-
+/
 
 
 SELECT * FROM AUDITORIA_SISTEMA;
@@ -542,6 +1105,285 @@ APELLIDO,
 TOTAL_COMPRADO_CLIENTE(ID_CLIENTE)
 FROM CLIENTES;
 
+-- =========================
+-- CURSORES
+-- =========================
+
+
+
+-- =========================
+-- PROCEDIMIENTOS
+-- =========================
+
+
+
+-- =========================
+-- PAQUETES
+-- =========================
+
+
+-- =========================
+-- EXCEPCIONES
+-- =========================
+
+
+
+-- =========================
+-- EXPRECIONES REGULARES
+-- =========================
+
+SET SERVEROUTPUT ON;
+
+-- =======================================================
+-- 1.1  Validar que el correo tenga formato nombre@dominio.ext
+--      ?til al registrar o actualizar CORREOS de clientes
+-- =======================================================
+SELECT c.ID_CLIENTE, c.CORREO
+FROM   AdminProyecto.CORREOS c
+WHERE  REGEXP_LIKE(c.CORREO,
+           '^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$');
+
+-- =======================================================
+-- 1.2  Correos INV?LIDOS (para auditoria / limpieza)
+-- =======================================================
+SELECT c.ID_CLIENTE, c.CORREO
+FROM   AdminProyecto.CORREOS c
+WHERE  NOT REGEXP_LIKE(c.CORREO,
+           '^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$');
+
+-- =======================================================
+-- 1.3  Validar tel?fonos: exactamente 8 d?gitos (Costa Rica)
+--      ?til en TELEFONOS de clientes
+-- =======================================================
+SELECT t.ID_CLIENTE, t.TELEFONO
+FROM   AdminProyecto.TELEFONOS t
+WHERE  REGEXP_LIKE(t.TELEFONO, '^[0-9]{8}$');
+
+-- =======================================================
+-- 1.4  Tel?fonos que NO cumplen el formato (para revisar)
+-- =======================================================
+SELECT t.ID_CLIENTE, t.TELEFONO
+FROM   AdminProyecto.TELEFONOS t
+WHERE  NOT REGEXP_LIKE(t.TELEFONO, '^[0-9]{8}$');
+
+-- =======================================================
+-- 1.5  Buscar productos cuyo nombre contenga un n?mero
+--      (ej: RTX 4060, 980 Pro, 16GB ?)
+--      ?til para filtrar componentes con specs en el nombre
+-- =======================================================
+SELECT ID_PRODUCTO, NOMBRE, PRECIO
+FROM   AdminProyecto.PRODUCTOS
+WHERE  REGEXP_LIKE(NOMBRE, '[0-9]')
+ORDER  BY NOMBRE;
+
+-- =======================================================
+-- 1.6  Productos cuya descripci?n mencione "DDR4" o "DDR5"
+--      (case-insensitive) ? Memoria RAM
+-- =======================================================
+SELECT ID_PRODUCTO, NOMBRE, DESCRIPCION
+FROM   AdminProyecto.PRODUCTOS
+WHERE  REGEXP_LIKE(DESCRIPCION, 'DDR[45]', 'i');
+
+-- =======================================================
+-- 1.7  Extraer la capacidad (n?mero + GB/TB) del nombre
+--      del producto ? ?til para ordenar almacenamiento
+-- =======================================================
+SELECT NOMBRE,
+       REGEXP_SUBSTR(NOMBRE, '[0-9]+\s*(GB|TB)', 1, 1, 'i') AS CAPACIDAD
+FROM   AdminProyecto.PRODUCTOS
+WHERE  REGEXP_LIKE(NOMBRE, '[0-9]+\s*(GB|TB)', 'i')
+ORDER  BY NOMBRE;
+
+-- =======================================================
+-- 1.8  Limpiar espacios dobles en DESCRIPCION de productos
+--      (REGEXP_REPLACE) ? normalizaci?n de texto
+-- =======================================================
+SELECT ID_PRODUCTO,
+       NOMBRE,
+       REGEXP_REPLACE(DESCRIPCION, ' {2,}', ' ') AS DESCRIPCION_LIMPIA
+FROM   AdminProyecto.PRODUCTOS;
+
+-- =======================================================
+-- 1.9  Validar USERNAME: solo letras, n?meros y gui?n bajo,
+--      m?nimo 4 caracteres
+-- =======================================================
+SELECT ID_USUARIO, USERNAME, ROL
+FROM   AdminProyecto.USUARIOS
+WHERE  REGEXP_LIKE(USERNAME, '^[A-Za-z0-9_]{4,}$');
+
+-- =======================================================
+-- 1.10 Proveedores cuyo correo sea de dominio .com o .cr
+-- =======================================================
+SELECT ID_PROVEEDOR, NOMBRE, CORREO
+FROM   AdminProyecto.PROVEEDORES
+WHERE  REGEXP_LIKE(CORREO, '\.(com|cr)$', 'i');
+
+-- =======================================================
+-- 1.11 Posici?n donde aparece el primer n?mero en el nombre
+--      del producto (REGEXP_INSTR)
+-- =======================================================
+SELECT NOMBRE,
+       REGEXP_INSTR(NOMBRE, '[0-9]') AS POS_PRIMER_NUMERO
+FROM   AdminProyecto.PRODUCTOS
+WHERE  REGEXP_INSTR(NOMBRE, '[0-9]') > 0
+ORDER  BY NOMBRE;
+
+
+-- =========================
+-- SQL DINAMICO
+-- =========================
+
+CREATE OR REPLACE PROCEDURE BuscarProductos(
+    p_categoria  IN NUMBER   DEFAULT NULL,
+    p_marca      IN NUMBER   DEFAULT NULL,
+    p_precio_max IN NUMBER   DEFAULT NULL,
+    p_texto      IN VARCHAR2 DEFAULT NULL
+) AS
+    v_sql    VARCHAR2(2000);
+    v_cursor SYS_REFCURSOR;
+    v_id     NUMBER;
+    v_nombre VARCHAR2(100);
+    v_precio NUMBER;
+    v_marca  VARCHAR2(100);
+BEGIN
+    v_sql := 'SELECT p.ID_PRODUCTO, p.NOMBRE, p.PRECIO, m.NOMBRE_MARCA
+              FROM AdminProyecto.PRODUCTOS p
+              JOIN AdminProyecto.MARCAS m ON m.ID_MARCA = p.ID_MARCA
+              WHERE 1=1';
+
+    IF p_categoria IS NOT NULL THEN
+        v_sql := v_sql || ' AND p.ID_CATEGORIA = ' || p_categoria;
+    END IF;
+
+    IF p_marca IS NOT NULL THEN
+        v_sql := v_sql || ' AND p.ID_MARCA = ' || p_marca;
+    END IF;
+
+    IF p_precio_max IS NOT NULL THEN
+        v_sql := v_sql || ' AND p.PRECIO <= ' || p_precio_max;
+    END IF;
+
+    IF p_texto IS NOT NULL THEN
+        v_sql := v_sql || ' AND (UPPER(p.NOMBRE) LIKE UPPER(''%' || p_texto || '%'')'
+                        || ' OR UPPER(p.DESCRIPCION) LIKE UPPER(''%' || p_texto || '%''))';
+    END IF;
+
+    v_sql := v_sql || ' ORDER BY p.NOMBRE';
+
+    OPEN v_cursor FOR v_sql;
+    LOOP
+        FETCH v_cursor INTO v_id, v_nombre, v_precio, v_marca;
+        EXIT WHEN v_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE(v_id || ' | ' || v_nombre || ' | $' || v_precio || ' | ' || v_marca);
+    END LOOP;
+    CLOSE v_cursor;
+END BuscarProductos;
+/
+
+EXEC BuscarProductos(p_categoria => 9, p_precio_max => 500);
+-- Ejemplo de uso:
+EXEC AdminProyecto.BuscarProductos(p_texto => 'RTX');
+
+-- =======================================================
+-- 2.2  Contar productos por cualquier columna din?mica
+--      ?til para reportes de administraci?n
+-- =======================================================
+CREATE OR REPLACE PROCEDURE AdminProyecto.ContarPorColumna(
+    p_columna IN VARCHAR2   -- 'ID_CATEGORIA' | 'ID_MARCA' | 'STOCK'
+) AS
+    v_sql    VARCHAR2(500);
+    v_cursor SYS_REFCURSOR;
+    v_grupo  VARCHAR2(100);
+    v_total  NUMBER;
+BEGIN
+    -- Solo se permite un conjunto seguro de columnas
+    IF p_columna NOT IN ('ID_CATEGORIA','ID_MARCA','STOCK') THEN
+        RAISE_APPLICATION_ERROR(-20001, 'Columna no permitida: ' || p_columna);
+    END IF;
+
+    v_sql := 'SELECT TO_CHAR(' || p_columna || '), COUNT(*)
+              FROM AdminProyecto.PRODUCTOS
+              GROUP BY ' || p_columna || '
+              ORDER BY COUNT(*) DESC';
+
+    OPEN v_cursor FOR v_sql;
+    LOOP
+        FETCH v_cursor INTO v_grupo, v_total;
+        EXIT WHEN v_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE(p_columna || ': ' || v_grupo || ' => ' || v_total || ' productos');
+    END LOOP;
+    CLOSE v_cursor;
+END ContarPorColumna;
+/
+
+-- Ejemplo:
+EXEC AdminProyecto.ContarPorColumna('ID_CATEGORIA');
+EXEC AdminProyecto.ContarPorColumna('ID_MARCA');
+
+-- =======================================================
+-- 2.3  Actualizar precio de productos de una categor?a
+--      con un porcentaje din?mico (descuento o aumento)
+--      ?til para campa?as de ofertas desde el admin
+-- =======================================================
+CREATE OR REPLACE PROCEDURE AdminProyecto.AjustarPrecioCategoria(
+    p_id_categoria IN NUMBER,
+    p_porcentaje   IN NUMBER   -- negativo = descuento, positivo = aumento
+) AS
+    v_sql VARCHAR2(300);
+BEGIN
+    v_sql := 'UPDATE AdminProyecto.PRODUCTOS
+              SET PRECIO = ROUND(PRECIO * (1 + (' || p_porcentaje || ' / 100)), 2)
+              WHERE ID_CATEGORIA = ' || p_id_categoria;
+
+    EXECUTE IMMEDIATE v_sql;
+
+    DBMS_OUTPUT.PUT_LINE('Filas actualizadas: ' || SQL%ROWCOUNT);
+    COMMIT;
+END AjustarPrecioCategoria;
+/
+
+-- Ejemplo: bajar 10% todas las Gr?ficas (ID_CATEGORIA = 9)
+EXEC AdminProyecto.AjustarPrecioCategoria(9, -10);
+
+-- =======================================================
+-- 2.4  Buscar atributos de producto por nombre din?mico
+--      Ej: todas las GPUs con atributo "VRAM"
+-- =======================================================
+CREATE OR REPLACE PROCEDURE AdminProyecto.BuscarPorAtributo(
+    p_nombre_atributo IN VARCHAR2,
+    p_valor_minimo    IN VARCHAR2 DEFAULT NULL
+) AS
+    v_sql    VARCHAR2(1000);
+    v_cursor SYS_REFCURSOR;
+    v_prod   VARCHAR2(100);
+    v_attr   VARCHAR2(100);
+    v_valor  VARCHAR2(200);
+BEGIN
+    v_sql := 'SELECT p.NOMBRE, pa.NOMBRE_ATRIBUTO, pa.VALOR
+              FROM AdminProyecto.PRODUCTO_ATRIBUTOS pa
+              JOIN AdminProyecto.PRODUCTOS p ON p.ID_PRODUCTO = pa.ID_PRODUCTO
+              WHERE UPPER(pa.NOMBRE_ATRIBUTO) = UPPER(''' || p_nombre_atributo || ''')';
+
+    IF p_valor_minimo IS NOT NULL THEN
+        v_sql := v_sql || ' AND pa.VALOR >= ''' || p_valor_minimo || '''';
+    END IF;
+
+    v_sql := v_sql || ' ORDER BY p.NOMBRE';
+
+    OPEN v_cursor FOR v_sql;
+    LOOP
+        FETCH v_cursor INTO v_prod, v_attr, v_valor;
+        EXIT WHEN v_cursor%NOTFOUND;
+        DBMS_OUTPUT.PUT_LINE(v_prod || ' | ' || v_attr || ': ' || v_valor);
+    END LOOP;
+    CLOSE v_cursor;
+END BuscarPorAtributo;
+/
+
+-- Ejemplo:
+EXEC AdminProyecto.BuscarPorAtributo('VRAM');
+EXEC AdminProyecto.BuscarPorAtributo('Frecuencia', '3200MHz');
+
 
 -- =========================
 -- PERMISOS
@@ -552,11 +1394,39 @@ GRANT SELECT ON AdminProyecto.MARCAS TO Consulta;
 
 GRANT SELECT ON AdminProyecto.CATEGORIAS TO Consulta;
 
-GRANT SELECT ON AdminProyecto.DETALLE_VENTAS TO Consulta;
-
-GRANT SELECT ON AdminProyecto.VENTAS TO Consulta;
+GRANT SELECT ON AdminProyecto.DETALLE_VENTA TO Consulta;
 
 GRANT SELECT ON AdminProyecto.PRODUCTO_ATRIBUTOS TO Consulta;
+
+GRANT SELECT ON AdminProyecto.USUARIOS TO Consulta;
+
+GRANT SELECT ON AdminProyecto.USUARIOS TO Operador;
+
+GRANT SELECT ON AdminProyecto.CLIENTES TO Operador;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON AdminProyecto.CARRITO TO Operador;
+
+GRANT SELECT ON AdminProyecto.PRODUCTOS TO Operador;
+
+GRANT SELECT ON AdminProyecto.MARCAS TO Operador;
+
+GRANT SELECT, INSERT ON AdminProyecto.DETALLE_VENTAS TO Operador;
+
+GRANT SELECT, INSERT ON AdminProyecto.VENTAS TO Operador;
+
+GRANT SELECT ON AdminProyecto.METODOS_PAGO TO Operador;
+
+GRANT SELECT, INSERT ON AdminProyecto.CLIENTES TO Operador;
+
+GRANT SELECT, INSERT ON AdminProyecto.USUARIOS TO Operador;
+
+GRANT SELECT, INSERT ON AdminProyecto.CORREOS TO Operador;
+
+GRANT INSERT ON AdminProyecto.DIRECCIONES TO Operador;
+
+GRANT SELECT ON AdminProyecto.CATEGORIAS TO Operador;
+
+GRANT SELECT ON AdminProyecto.PRODUCTO_ATRIBUTOS TO Operador;
 
 -- =========================
 -- CATEGORIAS
@@ -1270,6 +2140,8 @@ INSERT INTO CLIENTES (NOMBRE, APELLIDO) VALUES ('Sofia',    'Jimenez');
 INSERT INTO CLIENTES (NOMBRE, APELLIDO) VALUES ('Andres',   'Salazar');
 COMMIT;
 
+SELECT * FROM CLIENTES;
+
 -- =========================
 -- USUARIOS
 -- ========================
@@ -1277,9 +2149,17 @@ INSERT INTO USUARIOS (USERNAME, PASSWORD, ROL) VALUES ('admin', 'admin123', 'ADM
 
 INSERT INTO USUARIOS (USERNAME, PASSWORD, ROL) VALUES ('vendedor1', 'vend123', 'VENDEDOR');
 
-INSERT INTO USUARIOS (USERNAME, PASSWORD, ROL, ID_CLIENTE) VALUES ('juanp', '1234', 'CLIENTE', 1);
+INSERT INTO USUARIOS (USERNAME, PASSWORD, ROL, ID_CLIENTE) VALUES ('Luis', '1234', 'CLIENTE', 1);
 
-INSERT INTO USUARIOS (USERNAME, PASSWORD, ROL, ID_CLIENTE) VALUES ('marial', '1234', 'CLIENTE', 2);
+INSERT INTO USUARIOS (USERNAME, PASSWORD, ROL, ID_CLIENTE) VALUES ('Valeria', '1234', 'CLIENTE', 2);
+
+INSERT INTO USUARIOS (USERNAME, PASSWORD, ROL, ID_CLIENTE)  VALUES ('diegov', '1234', 'CLIENTE', 3);
+
+INSERT INTO USUARIOS (USERNAME, PASSWORD, ROL, ID_CLIENTE)  VALUES ('sofiaj', '1234', 'CLIENTE', 4);
+
+INSERT INTO USUARIOS (USERNAME, PASSWORD, ROL, ID_CLIENTE)  VALUES ('andress', '1234', 'CLIENTE', 5);
+
+SELECT * FROM USUARIOS;
 COMMIT;
 
 -- =========================
@@ -1362,6 +2242,8 @@ INSERT INTO DETALLE_VENTAS (ID_CLIENTE, ID_METODO) VALUES (4, 2);
 
 INSERT INTO DETALLE_VENTAS (ID_CLIENTE, ID_METODO) VALUES (5, 1);
 
+SELECT * FROM DETALLE_VENTAS;
+
  
 COMMIT;
 
@@ -1382,6 +2264,10 @@ INSERT INTO VENTAS (ID_DETALLE, ID_PRODUCTO, CANTIDAD, PRECIO_UNITARIO) VALUES (
 INSERT INTO VENTAS (ID_DETALLE, ID_PRODUCTO, CANTIDAD, PRECIO_UNITARIO) VALUES (4, 22, 1,  60);
  
 INSERT INTO VENTAS (ID_DETALLE, ID_PRODUCTO, CANTIDAD, PRECIO_UNITARIO) VALUES (5, 27, 1, 400);
+
+INSERT INTO VENTAS (ID_DETALLE, ID_PRODUCTO, CANTIDAD, PRECIO_UNITARIO) VALUES (5, 26, 2, 400);
+
+SELECT * FROM VENTAS;
 SET DEFINE ON;
 
 

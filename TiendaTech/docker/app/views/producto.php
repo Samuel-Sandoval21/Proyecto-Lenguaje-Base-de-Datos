@@ -1,30 +1,11 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../models/ProductoModel.php';
 
 $id = $_GET['id'] ?? null;
 
 if ($id) {
-
-    $sql = "SELECT 
-                p.ID_PRODUCTO,
-                p.NOMBRE,
-                p.DESCRIPCION,
-                p.PRECIO,
-                p.STOCK,
-                p.IMAGEN,
-                p.ID_CATEGORIA,
-                m.NOMBRE_MARCA,
-                c.NOMBRE_CATEGORIA
-            FROM AdminProyecto.PRODUCTOS p
-            JOIN AdminProyecto.MARCAS m ON p.ID_MARCA = m.ID_MARCA
-            JOIN AdminProyecto.CATEGORIAS c ON p.ID_CATEGORIA = c.ID_CATEGORIA
-            WHERE p.ID_PRODUCTO = :id";
-
-    $stid = oci_parse($conn, $sql);
-    oci_bind_by_name($stid, ":id", $id);
-    oci_execute($stid);
-
-    $producto = oci_fetch_assoc($stid);
+    $producto = getProductoById($conn, (int)$id);
 
     if ($producto) {
 ?>
@@ -80,27 +61,32 @@ if ($id) {
             </p>
 
             <!-- BOTON -->
-            <form action="carrito.php" method="POST">
-                <input type="hidden" name="id_producto" value="<?php echo $producto['ID_PRODUCTO']; ?>">
-
-                <button type="submit" style="
-                    background:#1a73e8;
-                    color:white;
-                    border:none;
-                    padding:18px;
-                    border-radius:10px;
-                    font-size:18px;
-                    cursor:pointer;
-                    width:100%;
-                    transition:0.3s;
-                "
-                onmouseover="this.style.background='#1558b0'"
-                onmouseout="this.style.background='#1a73e8'">
-
+            <?php
+            if (session_status() === PHP_SESSION_NONE) session_start();
+            $currentUrl = 'index.php?page=producto&id=' . $producto['ID_PRODUCTO'];
+            $logueado = !empty($_SESSION['usuario']);
+            ?>
+            <?php if ($logueado): ?>
+                <form action="controllers/carrito_action.php" method="POST">
+                    <input type="hidden" name="accion"      value="agregar">
+                    <input type="hidden" name="id_producto" value="<?php echo $producto['ID_PRODUCTO']; ?>">
+                    <input type="hidden" name="cantidad"    value="1">
+                    <input type="hidden" name="redirect"    value="<?php echo htmlspecialchars($currentUrl); ?>">
+                    <button type="submit" style="background:#1a73e8;color:white;border:none;padding:18px;border-radius:10px;font-size:18px;cursor:pointer;width:100%;transition:0.3s;"
+                        onmouseover="this.style.background='#1558b0'"
+                        onmouseout="this.style.background='#1a73e8'">
+                        🛒 Agregar al carrito
+                    </button>
+                </form>
+            <?php else: ?>
+                <button
+                    onclick="abrirLoginConRedirect('<?php echo htmlspecialchars($currentUrl); ?>')"
+                    style="background:#1a73e8;color:white;border:none;padding:18px;border-radius:10px;font-size:18px;cursor:pointer;width:100%;transition:0.3s;"
+                    onmouseover="this.style.background='#1558b0'"
+                    onmouseout="this.style.background='#1a73e8'">
                     🛒 Agregar al carrito
-
                 </button>
-            </form>
+            <?php endif; ?>
 
         </div>
 
@@ -108,31 +94,7 @@ if ($id) {
 
     <!-- PRODUCTOS RELACIONADOS -->
     <?php
-    $sql_rel = "SELECT 
-                    p.ID_PRODUCTO,
-                    p.NOMBRE,
-                    p.DESCRIPCION,
-                    p.PRECIO,
-                    p.STOCK,
-                    p.IMAGEN,
-                    p.ID_CATEGORIA,
-                    m.NOMBRE_MARCA,
-                    c.NOMBRE_CATEGORIA
-                FROM AdminProyecto.PRODUCTOS p
-                JOIN AdminProyecto.MARCAS m 
-                    ON p.ID_MARCA = m.ID_MARCA
-                JOIN AdminProyecto.CATEGORIAS c 
-                    ON p.ID_CATEGORIA = c.ID_CATEGORIA
-                WHERE p.ID_CATEGORIA = :categoria
-                AND p.ID_PRODUCTO != :id
-                ORDER BY p.NOMBRE";
-
-    $stid_rel = oci_parse($conn, $sql_rel);
-
-    oci_bind_by_name($stid_rel, ":categoria", $producto['ID_CATEGORIA']);
-    oci_bind_by_name($stid_rel, ":id", $producto['ID_PRODUCTO']);
-
-    oci_execute($stid_rel);
+    $relacionados = getProductosRelacionados($conn, (int)$producto['ID_CATEGORIA'], (int)$producto['ID_PRODUCTO']);
     ?>
 
     <h2 style="margin-top:60px; text-align:center;">
@@ -147,7 +109,7 @@ if ($id) {
     ">
 
     <?php
-    while ($row = oci_fetch_assoc($stid_rel)) {
+    foreach ($relacionados as $row) {
         include __DIR__ . '/components/info_producto.php';
     }
     ?>
