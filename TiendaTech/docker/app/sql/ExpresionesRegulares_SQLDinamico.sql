@@ -1,25 +1,16 @@
--- =======================================================
--- EXPRESIONES REGULARES Y SQL DINÁMICO — TiendaTech
--- Oracle 19c / AdminProyecto
--- =======================================================
-SET SERVEROUTPUT ON;
--- =======================================================
--- SECCIÓN 1: EXPRESIONES REGULARES
--- Funciones usadas: REGEXP_LIKE, REGEXP_INSTR,
---                   REGEXP_REPLACE, REGEXP_SUBSTR
--- =======================================================
+-- =========================
+-- EXPRECIONES REGULARES
+-- =========================
 
--- =======================================================
--- 1.1  Validar que el correo tenga formato nombre@dominio.ext
---      Útil al registrar o actualizar CORREOS de clientes
--- =======================================================
+SET SERVEROUTPUT ON;
+
 SELECT c.ID_CLIENTE, c.CORREO
 FROM   AdminProyecto.CORREOS c
 WHERE  REGEXP_LIKE(c.CORREO,
            '^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$');
 
 -- =======================================================
--- 1.2  Correos INVÁLIDOS (para auditoria / limpieza)
+-- 1.2  Correos INVï¿½LIDOS (para auditoria / limpieza)
 -- =======================================================
 SELECT c.ID_CLIENTE, c.CORREO
 FROM   AdminProyecto.CORREOS c
@@ -27,24 +18,24 @@ WHERE  NOT REGEXP_LIKE(c.CORREO,
            '^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$');
 
 -- =======================================================
--- 1.3  Validar teléfonos: exactamente 8 dígitos (Costa Rica)
---      Útil en TELEFONOS de clientes
+-- 1.3  Validar telï¿½fonos: exactamente 8 dï¿½gitos (Costa Rica)
+--      ï¿½til en TELEFONOS de clientes
 -- =======================================================
 SELECT t.ID_CLIENTE, t.TELEFONO
 FROM   AdminProyecto.TELEFONOS t
 WHERE  REGEXP_LIKE(t.TELEFONO, '^[0-9]{8}$');
 
 -- =======================================================
--- 1.4  Teléfonos que NO cumplen el formato (para revisar)
+-- 1.4  Telï¿½fonos que NO cumplen el formato (para revisar)
 -- =======================================================
 SELECT t.ID_CLIENTE, t.TELEFONO
 FROM   AdminProyecto.TELEFONOS t
 WHERE  NOT REGEXP_LIKE(t.TELEFONO, '^[0-9]{8}$');
 
 -- =======================================================
--- 1.5  Buscar productos cuyo nombre contenga un número
---      (ej: RTX 4060, 980 Pro, 16GB …)
---      Útil para filtrar componentes con specs en el nombre
+-- 1.5  Buscar productos cuyo nombre contenga un nï¿½mero
+--      (ej: RTX 4060, 980 Pro, 16GB ï¿½)
+--      ï¿½til para filtrar componentes con specs en el nombre
 -- =======================================================
 SELECT ID_PRODUCTO, NOMBRE, PRECIO
 FROM   AdminProyecto.PRODUCTOS
@@ -52,16 +43,16 @@ WHERE  REGEXP_LIKE(NOMBRE, '[0-9]')
 ORDER  BY NOMBRE;
 
 -- =======================================================
--- 1.6  Productos cuya descripción mencione "DDR4" o "DDR5"
---      (case-insensitive) — Memoria RAM
+-- 1.6  Productos cuya descripciï¿½n mencione "DDR4" o "DDR5"
+--      (case-insensitive) ï¿½ Memoria RAM
 -- =======================================================
 SELECT ID_PRODUCTO, NOMBRE, DESCRIPCION
 FROM   AdminProyecto.PRODUCTOS
 WHERE  REGEXP_LIKE(DESCRIPCION, 'DDR[45]', 'i');
 
 -- =======================================================
--- 1.7  Extraer la capacidad (número + GB/TB) del nombre
---      del producto — útil para ordenar almacenamiento
+-- 1.7  Extraer la capacidad (nï¿½mero + GB/TB) del nombre
+--      del producto ï¿½ ï¿½til para ordenar almacenamiento
 -- =======================================================
 SELECT NOMBRE,
        REGEXP_SUBSTR(NOMBRE, '[0-9]+\s*(GB|TB)', 1, 1, 'i') AS CAPACIDAD
@@ -71,7 +62,7 @@ ORDER  BY NOMBRE;
 
 -- =======================================================
 -- 1.8  Limpiar espacios dobles en DESCRIPCION de productos
---      (REGEXP_REPLACE) — normalización de texto
+--      (REGEXP_REPLACE) ï¿½ normalizaciï¿½n de texto
 -- =======================================================
 SELECT ID_PRODUCTO,
        NOMBRE,
@@ -79,8 +70,8 @@ SELECT ID_PRODUCTO,
 FROM   AdminProyecto.PRODUCTOS;
 
 -- =======================================================
--- 1.9  Validar USERNAME: solo letras, números y guión bajo,
---      mínimo 4 caracteres
+-- 1.9  Validar USERNAME: solo letras, nï¿½meros y guiï¿½n bajo,
+--      mï¿½nimo 4 caracteres
 -- =======================================================
 SELECT ID_USUARIO, USERNAME, ROL
 FROM   AdminProyecto.USUARIOS
@@ -94,7 +85,7 @@ FROM   AdminProyecto.PROVEEDORES
 WHERE  REGEXP_LIKE(CORREO, '\.(com|cr)$', 'i');
 
 -- =======================================================
--- 1.11 Posición donde aparece el primer número en el nombre
+-- 1.11 Posiciï¿½n donde aparece el primer nï¿½mero en el nombre
 --      del producto (REGEXP_INSTR)
 -- =======================================================
 SELECT NOMBRE,
@@ -105,7 +96,7 @@ ORDER  BY NOMBRE;
 
 -- =======================================================
 -- 1.12 Buscar atributos de producto cuyo valor sea un
---      número con unidad (MHz, GB, TB, W, mm, nm …)
+--      nï¿½mero con unidad (MHz, GB, TB, W, mm, nm ï¿½)
 -- =======================================================
 SELECT pa.ID_PRODUCTO, p.NOMBRE AS PRODUCTO,
        pa.NOMBRE_ATRIBUTO, pa.VALOR
@@ -114,18 +105,11 @@ JOIN   AdminProyecto.PRODUCTOS p ON p.ID_PRODUCTO = pa.ID_PRODUCTO
 WHERE  REGEXP_LIKE(pa.VALOR, '^[0-9]+(\.[0-9]+)?\s*(MHz|GB|TB|W|mm|nm|Hz|rpm)', 'i')
 ORDER  BY p.NOMBRE, pa.NOMBRE_ATRIBUTO;
 
+-- =========================
+-- SQL DINAMICO
+-- =========================
 
--- =======================================================
--- SECCIÓN 2: SQL DINÁMICO (EXECUTE IMMEDIATE)
--- Procedimientos PL/SQL reutilizables desde la aplicación
--- =======================================================
 
--- =======================================================
--- 2.1  Búsqueda dinámica de productos con filtros opcionales
---      Parámetros: categoría, marca, precio máximo, texto
---      Se construye el WHERE solo con los filtros que
---      el usuario eligió — igual a lo que hace el PHP
--- =======================================================
 CREATE OR REPLACE PROCEDURE BuscarProductos(
     p_categoria  IN NUMBER   DEFAULT NULL,
     p_marca      IN NUMBER   DEFAULT NULL,
@@ -179,8 +163,8 @@ EXEC BuscarProductos(p_categoria => 9, p_precio_max => 500);
 -- EXEC AdminProyecto.BuscarProductos(p_texto => 'RTX');
 
 -- =======================================================
--- 2.2  Contar productos por cualquier columna dinámica
---      Útil para reportes de administración
+-- 2.2  Contar productos por cualquier columna dinï¿½mica
+--      ï¿½til para reportes de administraciï¿½n
 -- =======================================================
 CREATE OR REPLACE PROCEDURE AdminProyecto.ContarPorColumna(
     p_columna IN VARCHAR2   -- 'ID_CATEGORIA' | 'ID_MARCA' | 'STOCK'
@@ -215,9 +199,9 @@ END ContarPorColumna;
 -- EXEC AdminProyecto.ContarPorColumna('ID_MARCA');
 
 -- =======================================================
--- 2.3  Actualizar precio de productos de una categoría
---      con un porcentaje dinámico (descuento o aumento)
---      Útil para campañas de ofertas desde el admin
+-- 2.3  Actualizar precio de productos de una categorï¿½a
+--      con un porcentaje dinï¿½mico (descuento o aumento)
+--      ï¿½til para campaï¿½as de ofertas desde el admin
 -- =======================================================
 CREATE OR REPLACE PROCEDURE AdminProyecto.AjustarPrecioCategoria(
     p_id_categoria IN NUMBER,
@@ -236,11 +220,11 @@ BEGIN
 END AjustarPrecioCategoria;
 /
 
--- Ejemplo: bajar 10% todas las Gráficas (ID_CATEGORIA = 9)
+-- Ejemplo: bajar 10% todas las Grï¿½ficas (ID_CATEGORIA = 9)
 -- EXEC AdminProyecto.AjustarPrecioCategoria(9, -10);
 
 -- =======================================================
--- 2.4  Buscar atributos de producto por nombre dinámico
+-- 2.4  Buscar atributos de producto por nombre dinï¿½mico
 --      Ej: todas las GPUs con atributo "VRAM"
 -- =======================================================
 CREATE OR REPLACE PROCEDURE AdminProyecto.BuscarPorAtributo(

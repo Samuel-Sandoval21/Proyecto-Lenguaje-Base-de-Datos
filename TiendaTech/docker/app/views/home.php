@@ -11,11 +11,7 @@ $topVendidos = [];
 while ($r = oci_fetch_assoc($stidMasVendidos)) $topVendidos[] = $r;
  
 /* ── TODOS LOS PRODUCTOS ─────────── */
-$sql  = getBaseProductosSQL() . " ORDER BY p.NOMBRE";
-$stid = oci_parse($conn, $sql);
-oci_execute($stid);
-$productos = [];
-while ($r = oci_fetch_assoc($stid)) $productos[] = $r;
+$productos = getTodosLosProductos($conn);
 ?>
  
 <!-- =========================
