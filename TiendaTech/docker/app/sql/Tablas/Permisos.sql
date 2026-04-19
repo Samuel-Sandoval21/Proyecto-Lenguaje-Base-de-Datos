@@ -42,3 +42,5 @@ GRANT SELECT ON AdminProyecto.CATEGORIAS TO Operador;
 GRANT SELECT ON AdminProyecto.PRODUCTO_ATRIBUTOS TO Operador;
 
 GRANT SELECT ON AdminProyecto.VENTAS TO Consulta;
+
+GRANT SELECT ON AdminProyecto.REGISTRO TO Consulta;
