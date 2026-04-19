@@ -4,10 +4,10 @@ require_once __DIR__ . '/ProductoModel.php';
 function getBaseDetalleVentaSQL(): string {
     return "SELECT 
                 base.*,
-                SUM(dv.CANTIDAD) AS TOTAL_VENDIDO
-            FROM AdminProyecto.DETALLE_VENTA dv
+                SUM(v.CANTIDAD) AS TOTAL_VENDIDO
+            FROM AdminProyecto.VENTAS v
             JOIN (" . getBaseProductosSQL() . ") base
-                ON dv.ID_PRODUCTO = base.ID_PRODUCTO
+                ON v.ID_PRODUCTO = base.ID_PRODUCTO
             GROUP BY
                 base.ID_PRODUCTO,
                 base.NOMBRE,
