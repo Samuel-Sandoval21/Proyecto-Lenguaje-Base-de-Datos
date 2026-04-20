@@ -330,17 +330,6 @@ SELECT * FROM AUDITORIA_SISTEMA;
 -- =========================
 
 -- =========================
---Baja la cantidad de producto cuando se hace una venta y de agrega en la tabla DETALLE_VENTA
-CREATE OR REPLACE TRIGGER TRG_DESCONTAR_STOCK
-AFTER INSERT ON DETALLE_VENTA
-FOR EACH ROW
-BEGIN
-    UPDATE PRODUCTOS
-    SET STOCK = STOCK - :NEW.CANTIDAD
-    WHERE ID_PRODUCTO = :NEW.ID_PRODUCTO;
-END;
-
--- =========================
 --Evita que se pueda vender mas producto del que hay en stock
 CREATE OR REPLACE TRIGGER TRG_VALIDAR_STOCK
 BEFORE INSERT ON DETALLE_VENTA
@@ -351,31 +340,11 @@ BEGIN
     SELECT STOCK INTO v_stock
     FROM PRODUCTOS
     WHERE ID_PRODUCTO = :NEW.ID_PRODUCTO;
-
+ 
     IF v_stock < :NEW.CANTIDAD THEN
         RAISE_APPLICATION_ERROR(-20001, 'No hay suficiente stock');
     END IF;
 END;
-
--- =========================
--- Crea la cantidad de venta hecha
-CREATE OR REPLACE TRIGGER TRG_CALCULAR_TOTAL
-AFTER INSERT ON DETALLE_VENTA
-FOR EACH ROW
-BEGIN
-    UPDATE VENTAS
-    SET TOTAL =
-    (
-        SELECT SUM(CANTIDAD * PRECIO_UNITARIO)
-        FROM DETALLE_VENTA
-        WHERE ID_VENTA = :NEW.ID_VENTA
-    )
-    WHERE ID_VENTA = :NEW.ID_VENTA;
-END;
-
--- =========================
--- Crea auditoria para las tablas mas importantes 
-
 -- =========================================
 -- AUDITORIA TABLA CATEGORIAS
 -- =========================================
