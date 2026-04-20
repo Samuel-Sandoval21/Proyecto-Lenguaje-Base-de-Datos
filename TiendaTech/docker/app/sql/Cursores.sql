@@ -1,4 +1,4 @@
-----Primer cursor - cursor que busca todos los datos de la tabla marca con Adata
+----PS/SQL anonimo - cursor que busca todos los datos de la tabla marca con Adata
 SET SERVEROUTPUT ON;
 DECLARE
     V_ID_PRODUCTO PRODUCTOS.ID_PRODUCTO%TYPE;
@@ -30,7 +30,7 @@ BEGIN
 END;
 /
 
-----Srgundo cursor - busca los productos menores a 5
+----PS/SQL anonimo - busca los productos menores a 5
 DECLARE
     V_ID PRODUCTOS.ID_PRODUCTO%TYPE;
     V_NOMBRE PRODUCTOS.NOMBRE%TYPE;
@@ -60,35 +60,42 @@ END;
 /
 
 
------Cursor 3 que busca las ventas por ID_METODO
+-----PS/SQL anonimo - busca las ventas por ID_METODO
 DECLARE
-    V_METODO NUMBER := &metodo;
-
-    V_ID_VENTA VENTAS.ID_VENTA%TYPE;
-    V_ID_CLIENTE VENTAS.ID_CLIENTE%TYPE;
-    V_TOTAL VENTAS.TOTAL%TYPE;
-    V_FECHA VENTAS.FECHA_VENTA%TYPE;
+    V_METODO     NUMBER := &metodo;
+    V_ID_DETALLE NUMBER;
+    V_ID_CLIENTE NUMBER;
+    V_TOTAL      NUMBER;
+    V_FECHA      DATE;
 
     CURSOR C_VENTAS_METODO IS
-        SELECT ID_VENTA, ID_CLIENTE, TOTAL, FECHA_VENTA
-        FROM VENTAS
-        WHERE ID_METODO = V_METODO;
+        SELECT
+            DETALLE_VENTAS.ID_DETALLE,
+            DETALLE_VENTAS.ID_CLIENTE,
+            SUM(VENTAS.CANTIDAD * VENTAS.PRECIO_UNITARIO) AS TOTAL,
+            DETALLE_VENTAS.FECHA_VENTA
+        FROM DETALLE_VENTAS
+        JOIN VENTAS ON VENTAS.ID_DETALLE = DETALLE_VENTAS.ID_DETALLE
+        WHERE DETALLE_VENTAS.ID_METODO = V_METODO
+        GROUP BY DETALLE_VENTAS.ID_DETALLE, DETALLE_VENTAS.ID_CLIENTE, DETALLE_VENTAS.FECHA_VENTA;
 
 BEGIN
     OPEN C_VENTAS_METODO;
-
     LOOP
-        FETCH C_VENTAS_METODO INTO V_ID_VENTA, V_ID_CLIENTE, V_TOTAL, V_FECHA;
+        FETCH C_VENTAS_METODO INTO V_ID_DETALLE, V_ID_CLIENTE, V_TOTAL, V_FECHA;
         EXIT WHEN C_VENTAS_METODO%NOTFOUND;
-
         DBMS_OUTPUT.PUT_LINE(
-            'VENTA: ' || V_ID_VENTA ||
+            'PEDIDO: '     || V_ID_DETALLE ||
             ' - CLIENTE: ' || V_ID_CLIENTE ||
-            ' - TOTAL: ' || V_TOTAL ||
-            ' - FECHA: ' || V_FECHA
+            ' - TOTAL: '   || V_TOTAL      ||
+            ' - FECHA: '   || V_FECHA
         );
     END LOOP;
-
     CLOSE C_VENTAS_METODO;
+
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        DBMS_OUTPUT.PUT_LINE('No hay ventas para ese método de pago.');
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error: ' || SQLERRM);
 END;
-/

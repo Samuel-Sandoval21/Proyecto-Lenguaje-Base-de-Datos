@@ -998,7 +998,7 @@ BEGIN
 
 SELECT SUM(CANTIDAD * PRECIO_UNITARIO)
 INTO V_TOTAL
-FROM DETALLE_VENTA
+FROM DETALLE_VENTAS
 WHERE ID_VENTA = P_ID_VENTA;
 
 RETURN V_TOTAL;
@@ -1074,11 +1074,6 @@ APELLIDO,
 TOTAL_COMPRADO_CLIENTE(ID_CLIENTE)
 FROM CLIENTES;
 
--- =========================
--- CURSORES
--- =========================
-
-
 
 -- =========================
 -- PROCEDIMIENTOS
@@ -1089,12 +1084,6 @@ FROM CLIENTES;
 -- =========================
 -- PAQUETES
 -- =========================
-
-
--- =========================
--- EXCEPCIONES
--- =========================
-
 
 
 -- =========================

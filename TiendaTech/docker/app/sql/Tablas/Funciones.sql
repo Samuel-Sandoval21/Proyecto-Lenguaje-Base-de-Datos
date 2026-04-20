@@ -1,8 +1,3 @@
--- =========================
--- FUNCIONES
--- Ejecutar como AdminProyecto
--- =========================
-
 
 -- =========================
 -- 1. TOTAL_VENTA
@@ -47,7 +42,7 @@ EXCEPTION
 END;
 /
 
-SELECT TOTAL_VENTA(1) AS TOTAL FROM DUAL;
+SELECT TOTAL_VENTA(2) AS TOTAL FROM DUAL;
 
 
 -- =========================
@@ -143,7 +138,6 @@ FROM CATEGORIAS;
 -- =========================
 -- 4. TOTAL_COMPRADO_CLIENTE
 -- Retorna el total gastado por un cliente
--- usando cursores anidados por pedido y línea
 -- =========================
 CREATE OR REPLACE FUNCTION TOTAL_COMPRADO_CLIENTE
 (
@@ -151,42 +145,23 @@ CREATE OR REPLACE FUNCTION TOTAL_COMPRADO_CLIENTE
 )
 RETURN NUMBER
 IS
-    V_TOTAL      NUMBER := 0;
-    V_SUBTOTAL   NUMBER;
-    V_ID_DETALLE NUMBER;
+    V_TOTAL NUMBER := 0;
 
-    -- Cursor nivel 1: pedidos del cliente
-    CURSOR C_PEDIDOS IS
-        SELECT ID_DETALLE
+    -- Un solo cursor que une ambas tablas y suma directo
+    CURSOR C_TOTAL IS
+        SELECT SUM(VENTAS.CANTIDAD * VENTAS.PRECIO_UNITARIO)
         FROM DETALLE_VENTAS
-        WHERE ID_CLIENTE = P_ID_CLIENTE;
-
-    -- Cursor nivel 2: líneas de cada pedido
-    CURSOR C_LINEAS(P_DETALLE NUMBER) IS
-        SELECT CANTIDAD * PRECIO_UNITARIO AS SUBTOTAL
-        FROM VENTAS
-        WHERE ID_DETALLE = P_DETALLE;
+        JOIN VENTAS ON VENTAS.ID_DETALLE = DETALLE_VENTAS.ID_DETALLE
+        WHERE DETALLE_VENTAS.ID_CLIENTE = P_ID_CLIENTE;
 
 BEGIN
     IF P_ID_CLIENTE IS NULL THEN
         RAISE_APPLICATION_ERROR(-20007, 'El ID de cliente no puede ser nulo.');
     END IF;
 
-    OPEN C_PEDIDOS;
-    LOOP
-        FETCH C_PEDIDOS INTO V_ID_DETALLE;
-        EXIT WHEN C_PEDIDOS%NOTFOUND;
-
-        OPEN C_LINEAS(V_ID_DETALLE);
-        LOOP
-            FETCH C_LINEAS INTO V_SUBTOTAL;
-            EXIT WHEN C_LINEAS%NOTFOUND;
-            V_TOTAL := V_TOTAL + V_SUBTOTAL;
-        END LOOP;
-        CLOSE C_LINEAS;
-
-    END LOOP;
-    CLOSE C_PEDIDOS;
+    OPEN C_TOTAL;
+    FETCH C_TOTAL INTO V_TOTAL;
+    CLOSE C_TOTAL;
 
     RETURN NVL(V_TOTAL, 0);
 

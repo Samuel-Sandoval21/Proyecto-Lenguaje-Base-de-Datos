@@ -7,8 +7,6 @@ GRANT SELECT ON AdminProyecto.MARCAS TO Consulta;
 
 GRANT SELECT ON AdminProyecto.CATEGORIAS TO Consulta;
 
-GRANT SELECT ON AdminProyecto.DETALLE_VENTA TO Consulta;
-
 GRANT SELECT ON AdminProyecto.PRODUCTO_ATRIBUTOS TO Consulta;
 
 GRANT SELECT ON AdminProyecto.USUARIOS TO Consulta;
@@ -44,3 +42,5 @@ GRANT SELECT ON AdminProyecto.PRODUCTO_ATRIBUTOS TO Operador;
 GRANT SELECT ON AdminProyecto.VENTAS TO Consulta;
 
 GRANT SELECT ON AdminProyecto.REGISTRO TO Consulta;
+
+GRANT SELECT ON AdminProyecto.AUDITORIA_SISTEMA TO Operador;

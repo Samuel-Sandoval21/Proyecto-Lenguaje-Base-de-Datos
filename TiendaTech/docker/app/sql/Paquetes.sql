@@ -1,19 +1,8 @@
--- ======================================================
--- AUTOR: Samuel Sandoval
--- PARTE: Paquetes (Packages)
--- PROYECTO: TiendaTech - Lenguajes de Base de Datos SC-504
--- FECHA: Abril 2026
--- DESCRIPCION: Implementacion de paquetes para agrupar
---              procedimientos y funciones relacionadas
--- ======================================================
-
 SET SERVEROUTPUT ON;
 
 -- ======================================================
 -- ESPECIFICACION DEL PAQUETE (PARTE PUBLICA)
 -- ======================================================
--- Aqui se declaran todos los objetos que seran accesibles
--- desde fuera del paquete (procedimientos, funciones, variables publicas)
 
 CREATE OR REPLACE PACKAGE PKG_TIENDATECH AS
     
@@ -73,8 +62,6 @@ END PKG_TIENDATECH;
 -- ======================================================
 -- CUERPO DEL PAQUETE (PARTE PRIVADA - IMPLEMENTACION)
 -- ======================================================
--- Aqui se implementan todos los procedimientos y funciones
--- declarados en la especificacion
 
 CREATE OR REPLACE PACKAGE BODY PKG_TIENDATECH AS
 
@@ -83,7 +70,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_TIENDATECH AS
     -- ==================================================
     
     -- --------------------------------------------------
-    -- REGISTRAR_VENTA
+    -- REGISTRAR_VENTA (CORREGIDO)
     -- --------------------------------------------------
     PROCEDURE REGISTRAR_VENTA (
         P_ID_CLIENTE        IN  NUMBER,
@@ -99,9 +86,11 @@ CREATE OR REPLACE PACKAGE BODY PKG_TIENDATECH AS
         v_item              VARCHAR2(100);
         v_id_prod           NUMBER;
         v_cantidad          NUMBER;
-        v_nuevo_id_venta    NUMBER;
+        v_nuevo_id_detalle  NUMBER;  -- ID_DETALLE de la cabecera
         v_precio_unitario   PRODUCTOS.PRECIO%TYPE;
         v_contador          NUMBER := 0;
+        v_total_calc        NUMBER := 0;
+        v_stock_disponible  NUMBER;
     BEGIN
         SAVEPOINT INICIO_VENTA;
         
@@ -116,14 +105,16 @@ CREATE OR REPLACE PACKAGE BODY PKG_TIENDATECH AS
                 RETURN;
         END;
         
-        -- Crear cabecera de venta
-        INSERT INTO VENTAS (ID_CLIENTE, ID_METODO, TOTAL)
-        VALUES (P_ID_CLIENTE, P_ID_METODO, 0)
-        RETURNING ID_VENTA INTO v_nuevo_id_venta;
+        -- Crear cabecera de venta en DETALLE_VENTAS
+        INSERT INTO DETALLE_VENTAS (ID_CLIENTE, ID_METODO)
+        VALUES (P_ID_CLIENTE, P_ID_METODO)
+        RETURNING ID_DETALLE INTO v_nuevo_id_detalle;
         
         -- Procesar productos
         v_pos := 1;
         v_contador := 0;
+        v_total_calc := 0;
+        
         LOOP
             v_comma_pos := INSTR(P_PRODUCTOS || ',', ',', v_pos);
             EXIT WHEN v_comma_pos = 0;
@@ -140,15 +131,27 @@ CREATE OR REPLACE PACKAGE BODY PKG_TIENDATECH AS
                     RAISE_APPLICATION_ERROR(-20011, 'Cantidad invalida para producto ' || v_id_prod);
                 END IF;
                 
-                -- Obtener precio
-                SELECT PRECIO INTO v_precio_unitario
+                -- Obtener precio y validar stock
+                SELECT PRECIO, STOCK INTO v_precio_unitario, v_stock_disponible
                 FROM PRODUCTOS
                 WHERE ID_PRODUCTO = v_id_prod;
                 
-                -- Insertar detalle (los triggers se activan automaticamente)
-                INSERT INTO DETALLE_VENTA (ID_VENTA, ID_PRODUCTO, CANTIDAD, PRECIO_UNITARIO)
-                VALUES (v_nuevo_id_venta, v_id_prod, v_cantidad, v_precio_unitario);
+                -- Validar stock disponible
+                IF v_stock_disponible < v_cantidad THEN
+                    RAISE_APPLICATION_ERROR(-20013, 'Stock insuficiente para producto ' || v_id_prod || 
+                                              '. Disponible: ' || v_stock_disponible);
+                END IF;
                 
+                -- Insertar detalle en VENTAS
+                INSERT INTO VENTAS (ID_DETALLE, ID_PRODUCTO, CANTIDAD, PRECIO_UNITARIO)
+                VALUES (v_nuevo_id_detalle, v_id_prod, v_cantidad, v_precio_unitario);
+                
+                -- Actualizar stock
+                UPDATE PRODUCTOS 
+                SET STOCK = STOCK - v_cantidad
+                WHERE ID_PRODUCTO = v_id_prod;
+                
+                v_total_calc := v_total_calc + (v_cantidad * v_precio_unitario);
                 v_contador := v_contador + 1;
             END IF;
             
@@ -159,14 +162,9 @@ CREATE OR REPLACE PACKAGE BODY PKG_TIENDATECH AS
             RAISE_APPLICATION_ERROR(-20012, 'No se especificaron productos.');
         END IF;
         
-        -- Actualizar total
-        UPDATE VENTAS
-        SET TOTAL = TOTAL_VENTA(v_nuevo_id_venta)
-        WHERE ID_VENTA = v_nuevo_id_venta
-        RETURNING TOTAL INTO P_TOTAL_VENTA;
-        
-        P_ID_VENTA_GENERADA := v_nuevo_id_venta;
-        P_MENSAJE := 'EXITO: Venta ' || v_nuevo_id_venta || ' registrada. Total: $' || 
+        P_TOTAL_VENTA := v_total_calc;
+        P_ID_VENTA_GENERADA := v_nuevo_id_detalle;
+        P_MENSAJE := 'EXITO: Venta ' || v_nuevo_id_detalle || ' registrada. Total: $' || 
                      TO_CHAR(P_TOTAL_VENTA, '999,999.99');
         
         COMMIT;
@@ -228,7 +226,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_TIENDATECH AS
     END AJUSTAR_STOCK;
     
     -- --------------------------------------------------
-    -- REPORTE_VENTAS_CLIENTE
+    -- REPORTE_VENTAS_CLIENTE (CORREGIDO - usando VENTAS para precios)
     -- --------------------------------------------------
     PROCEDURE REPORTE_VENTAS_CLIENTE (
         P_ID_CLIENTE        IN  NUMBER,
@@ -244,17 +242,26 @@ CREATE OR REPLACE PACKAGE BODY PKG_TIENDATECH AS
         
         P_NOMBRE_CLIENTE := v_nombre || ' ' || v_apellido;
         
-        SELECT NVL(SUM(TOTAL), 0) INTO P_TOTAL_GASTADO
-        FROM VENTAS WHERE ID_CLIENTE = P_ID_CLIENTE;
+        -- Calcular total gastado sumando desde VENTAS (donde está PRECIO_UNITARIO)
+        SELECT NVL(SUM(V.CANTIDAD * V.PRECIO_UNITARIO), 0) INTO P_TOTAL_GASTADO
+        FROM DETALLE_VENTAS DV
+        INNER JOIN VENTAS V ON V.ID_DETALLE = DV.ID_DETALLE
+        WHERE DV.ID_CLIENTE = P_ID_CLIENTE;
         
+        -- Abrir cursor con detalle de ventas
         OPEN P_CURSOR_REPORTE FOR
-            SELECT V.ID_VENTA, V.FECHA_VENTA, MP.NOMBRE AS METODO_PAGO,
-                   V.TOTAL, (SELECT COUNT(*) FROM DETALLE_VENTA DV 
-                             WHERE DV.ID_VENTA = V.ID_VENTA) AS CANTIDAD_PRODUCTOS
-            FROM VENTAS V
-            INNER JOIN METODOS_PAGO MP ON MP.ID_METODO = V.ID_METODO
-            WHERE V.ID_CLIENTE = P_ID_CLIENTE
-            ORDER BY V.FECHA_VENTA DESC;
+            SELECT 
+                DV.ID_DETALLE AS ID_VENTA,
+                DV.FECHA_VENTA,
+                MP.NOMBRE AS METODO_PAGO,
+                (SELECT SUM(V2.CANTIDAD * V2.PRECIO_UNITARIO) 
+                 FROM VENTAS V2 
+                 WHERE V2.ID_DETALLE = DV.ID_DETALLE) AS TOTAL,
+                (SELECT COUNT(*) FROM VENTAS V3 WHERE V3.ID_DETALLE = DV.ID_DETALLE) AS CANTIDAD_PRODUCTOS
+            FROM DETALLE_VENTAS DV
+            INNER JOIN METODOS_PAGO MP ON MP.ID_METODO = DV.ID_METODO
+            WHERE DV.ID_CLIENTE = P_ID_CLIENTE
+            ORDER BY DV.FECHA_VENTA DESC;
             
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
@@ -271,9 +278,6 @@ CREATE OR REPLACE PACKAGE BODY PKG_TIENDATECH AS
     -- IMPLEMENTACION DE FUNCIONES
     -- ==================================================
     
-    -- --------------------------------------------------
-    -- OBTENER_NOMBRE_PRODUCTO
-    -- --------------------------------------------------
     FUNCTION OBTENER_NOMBRE_PRODUCTO(P_ID_PRODUCTO NUMBER) RETURN VARCHAR2 IS
         v_nombre PRODUCTOS.NOMBRE%TYPE;
     BEGIN
@@ -286,24 +290,20 @@ CREATE OR REPLACE PACKAGE BODY PKG_TIENDATECH AS
             RETURN 'Producto no encontrado';
     END OBTENER_NOMBRE_PRODUCTO;
     
-    -- --------------------------------------------------
-    -- TOTAL_CLIENTE
-    -- --------------------------------------------------
+    -- TOTAL_CLIENTE corregido: usa VENTAS para el cálculo
     FUNCTION TOTAL_CLIENTE(P_ID_CLIENTE NUMBER) RETURN NUMBER IS
         v_total NUMBER;
     BEGIN
-        SELECT NVL(SUM(TOTAL), 0) INTO v_total
-        FROM VENTAS
-        WHERE ID_CLIENTE = P_ID_CLIENTE;
+        SELECT NVL(SUM(V.CANTIDAD * V.PRECIO_UNITARIO), 0) INTO v_total
+        FROM DETALLE_VENTAS DV
+        INNER JOIN VENTAS V ON V.ID_DETALLE = DV.ID_DETALLE
+        WHERE DV.ID_CLIENTE = P_ID_CLIENTE;
         RETURN v_total;
     EXCEPTION
         WHEN OTHERS THEN
             RETURN 0;
     END TOTAL_CLIENTE;
     
-    -- --------------------------------------------------
-    -- VERIFICAR_STOCK
-    -- --------------------------------------------------
     FUNCTION VERIFICAR_STOCK(P_ID_PRODUCTO NUMBER, P_CANTIDAD NUMBER) RETURN BOOLEAN IS
         v_stock PRODUCTOS.STOCK%TYPE;
     BEGIN
@@ -355,10 +355,10 @@ DECLARE
     v_cursor SYS_REFCURSOR;
     v_nombre_cliente VARCHAR2(200);
     v_total_gastado NUMBER;
-    v_id_venta_cursor VENTAS.ID_VENTA%TYPE;
-    v_fecha VENTAS.FECHA_VENTA%TYPE;
+    v_id_venta_cursor NUMBER;
+    v_fecha DATE;
     v_metodo VARCHAR2(50);
-    v_total_venta VENTAS.TOTAL%TYPE;
+    v_total_venta NUMBER;
     v_cantidad_prod NUMBER;
 BEGIN
     DBMS_OUTPUT.PUT_LINE('=== PRUEBA PAQUETE 2: PROCEDIMIENTOS ===');
@@ -385,6 +385,7 @@ BEGIN
     CLOSE v_cursor;
 END;
 /
+
 
 -- Verificacion final
 SELECT ID_PRODUCTO, NOMBRE, STOCK FROM PRODUCTOS WHERE ID_PRODUCTO IN (1,2);
