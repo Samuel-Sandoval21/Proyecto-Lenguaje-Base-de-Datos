@@ -331,20 +331,7 @@ SELECT * FROM AUDITORIA_SISTEMA;
 
 -- =========================
 --Evita que se pueda vender mas producto del que hay en stock
-CREATE OR REPLACE TRIGGER TRG_VALIDAR_STOCK
-BEFORE INSERT ON DETALLE_VENTA
-FOR EACH ROW
-DECLARE
-    v_stock PRODUCTOS.STOCK%TYPE;
-BEGIN
-    SELECT STOCK INTO v_stock
-    FROM PRODUCTOS
-    WHERE ID_PRODUCTO = :NEW.ID_PRODUCTO;
- 
-    IF v_stock < :NEW.CANTIDAD THEN
-        RAISE_APPLICATION_ERROR(-20001, 'No hay suficiente stock');
-    END IF;
-END;
+
 -- =========================================
 -- AUDITORIA TABLA CATEGORIAS
 -- =========================================

@@ -10,13 +10,14 @@
 SET SERVEROUTPUT ON;
 
 -- ======================================================
--- PROCEDIMIENTO 1: Registrar una nueva venta completa
+-- PROCEDIMIENTO 1: Registrar una nueva venta completa (CORREGIDO)
 -- ======================================================
 -- DESCRIPCION: Este procedimiento recibe los datos de una venta
 --              (cliente, metodo de pago, y productos con cantidades)
 --              y realiza toda la transaccion de forma atomica.
 --              Formato de P_PRODUCTOS: 'ID_PRODUCTO:CANTIDAD,ID_PRODUCTO:CANTIDAD'
 --              Ejemplo: '1:2,17:1,21:3'
+-- NOTA: Usa DETALLE_VENTAS como cabecera y VENTAS como detalle
 -- ======================================================
 
 CREATE OR REPLACE PROCEDURE SP_REGISTRAR_VENTA (
@@ -34,9 +35,11 @@ IS
     v_item              VARCHAR2(100);
     v_id_prod           NUMBER;
     v_cantidad          NUMBER;
-    v_nuevo_id_venta    NUMBER;
+    v_nuevo_id_detalle  NUMBER;  -- ID_DETALLE de la cabecera
     v_precio_unitario   PRODUCTOS.PRECIO%TYPE;
     v_contador          NUMBER := 0;
+    v_total_calc        NUMBER := 0;
+    v_stock_actual      NUMBER;
 BEGIN
     -- Iniciar punto de restauracion para la transaccion
     SAVEPOINT INICIO_VENTA;
@@ -52,13 +55,16 @@ BEGIN
             RETURN;
     END;
     
-    -- 2. Insertar la cabecera de la venta (TOTAL inicial en 0)
-    INSERT INTO VENTAS (ID_CLIENTE, ID_METODO, TOTAL)
-    VALUES (P_ID_CLIENTE, P_ID_METODO, 0)
-    RETURNING ID_VENTA INTO v_nuevo_id_venta;
+    -- 2. Insertar la cabecera de la venta en DETALLE_VENTAS
+    INSERT INTO DETALLE_VENTAS (ID_CLIENTE, ID_METODO)
+    VALUES (P_ID_CLIENTE, P_ID_METODO)
+    RETURNING ID_DETALLE INTO v_nuevo_id_detalle;
     
     -- 3. Procesar el string de productos (Ejemplo: "1:2,17:1,21:3")
     v_pos := 1;
+    v_contador := 0;
+    v_total_calc := 0;
+    
     LOOP
         -- Extraer cada item separado por coma
         v_comma_pos := INSTR(P_PRODUCTOS || ',', ',', v_pos);
@@ -77,21 +83,33 @@ BEGIN
                 RAISE_APPLICATION_ERROR(-20011, 'La cantidad debe ser mayor a 0 para el producto ' || v_id_prod);
             END IF;
             
-            -- Obtener el precio unitario actual del producto
+            -- Obtener el precio unitario actual del producto y validar stock
             BEGIN
-                SELECT PRECIO INTO v_precio_unitario
+                SELECT PRECIO, STOCK INTO v_precio_unitario, v_stock_actual
                 FROM PRODUCTOS
                 WHERE ID_PRODUCTO = v_id_prod;
+                
+                -- Validar stock disponible
+                IF v_stock_actual < v_cantidad THEN
+                    RAISE_APPLICATION_ERROR(-20013, 'Stock insuficiente para producto ' || v_id_prod || 
+                                              '. Disponible: ' || v_stock_actual || ', Solicitado: ' || v_cantidad);
+                END IF;
+                
             EXCEPTION
                 WHEN NO_DATA_FOUND THEN
                     RAISE_APPLICATION_ERROR(-20010, 'El producto con ID ' || v_id_prod || ' no existe.');
             END;
             
-            -- Insertar el detalle de venta
-            -- Los triggers TRG_VALIDAR_STOCK y TRG_DESCONTAR_STOCK se activan automaticamente
-            INSERT INTO DETALLE_VENTA (ID_VENTA, ID_PRODUCTO, CANTIDAD, PRECIO_UNITARIO)
-            VALUES (v_nuevo_id_venta, v_id_prod, v_cantidad, v_precio_unitario);
+            -- Insertar el detalle de venta en VENTAS
+            INSERT INTO VENTAS (ID_DETALLE, ID_PRODUCTO, CANTIDAD, PRECIO_UNITARIO)
+            VALUES (v_nuevo_id_detalle, v_id_prod, v_cantidad, v_precio_unitario);
             
+            -- Actualizar el stock del producto
+            UPDATE PRODUCTOS
+            SET STOCK = STOCK - v_cantidad
+            WHERE ID_PRODUCTO = v_id_prod;
+            
+            v_total_calc := v_total_calc + (v_cantidad * v_precio_unitario);
             v_contador := v_contador + 1;
         END IF;
         
@@ -103,14 +121,9 @@ BEGIN
         RAISE_APPLICATION_ERROR(-20012, 'No se especificaron productos para la venta.');
     END IF;
     
-    -- 4. Actualizar el TOTAL de la venta usando la funcion existente TOTAL_VENTA
-    UPDATE VENTAS
-    SET TOTAL = TOTAL_VENTA(v_nuevo_id_venta)
-    WHERE ID_VENTA = v_nuevo_id_venta
-    RETURNING TOTAL INTO P_TOTAL_VENTA;
-    
-    P_ID_VENTA_GENERADA := v_nuevo_id_venta;
-    P_MENSAJE := 'EXITO: Venta registrada correctamente. ID Venta: ' || v_nuevo_id_venta || 
+    P_TOTAL_VENTA := v_total_calc;
+    P_ID_VENTA_GENERADA := v_nuevo_id_detalle;
+    P_MENSAJE := 'EXITO: Venta registrada correctamente. ID Venta: ' || v_nuevo_id_detalle || 
                  ' - Total: $' || TO_CHAR(P_TOTAL_VENTA, '999,999.99');
     
     COMMIT;
@@ -126,10 +139,7 @@ END SP_REGISTRAR_VENTA;
 /
 
 -- ======================================================
--- PROCEDIMIENTO 2: Ajustar stock de un producto con auditoria
--- ======================================================
--- DESCRIPCION: Permite actualizar el stock de un producto,
---              registrando el cambio en la tabla AUDITORIA_SISTEMA
+-- PROCEDIMIENTO 2: Ajustar stock de un producto con auditoria (CORREGIDO)
 -- ======================================================
 
 CREATE OR REPLACE PROCEDURE SP_AJUSTAR_STOCK (
@@ -193,10 +203,7 @@ END SP_AJUSTAR_STOCK;
 /
 
 -- ======================================================
--- PROCEDIMIENTO 3: Reporte de ventas por cliente (con cursor de sistema)
--- ======================================================
--- DESCRIPCION: Genera un reporte con todas las ventas de un cliente
---              utilizando un SYS_REFCURSOR (cursor de sistema)
+-- PROCEDIMIENTO 3: Reporte de ventas por cliente (CORREGIDO)
 -- ======================================================
 
 CREATE OR REPLACE PROCEDURE SP_REPORTE_VENTAS_CLIENTE (
@@ -216,29 +223,31 @@ BEGIN
     
     P_NOMBRE_CLIENTE := v_nombre || ' ' || v_apellido;
     
-    -- Calcular total gastado por el cliente
-    SELECT NVL(SUM(TOTAL), 0) INTO P_TOTAL_GASTADO
-    FROM VENTAS
-    WHERE ID_CLIENTE = P_ID_CLIENTE;
+    -- Calcular total gastado por el cliente sumando los detalles de VENTAS
+    SELECT NVL(SUM(V.CANTIDAD * V.PRECIO_UNITARIO), 0) INTO P_TOTAL_GASTADO
+    FROM DETALLE_VENTAS DV
+    INNER JOIN VENTAS V ON V.ID_DETALLE = DV.ID_DETALLE
+    WHERE DV.ID_CLIENTE = P_ID_CLIENTE;
     
-    -- Abrir cursor REF (cursor de sistema) con el detalle de ventas
+    -- Abrir cursor REF con el detalle de ventas
     OPEN P_CURSOR_REPORTE FOR
         SELECT 
-            V.ID_VENTA,
-            V.FECHA_VENTA,
+            DV.ID_DETALLE AS ID_VENTA,
+            DV.FECHA_VENTA,
             MP.NOMBRE AS METODO_PAGO,
-            V.TOTAL,
-            (SELECT COUNT(*) FROM DETALLE_VENTA DV WHERE DV.ID_VENTA = V.ID_VENTA) AS CANTIDAD_PRODUCTOS
-        FROM VENTAS V
-        INNER JOIN METODOS_PAGO MP ON MP.ID_METODO = V.ID_METODO
-        WHERE V.ID_CLIENTE = P_ID_CLIENTE
-        ORDER BY V.FECHA_VENTA DESC;
+            (SELECT SUM(V2.CANTIDAD * V2.PRECIO_UNITARIO) 
+             FROM VENTAS V2 
+             WHERE V2.ID_DETALLE = DV.ID_DETALLE) AS TOTAL,
+            (SELECT COUNT(*) FROM VENTAS V3 WHERE V3.ID_DETALLE = DV.ID_DETALLE) AS CANTIDAD_PRODUCTOS
+        FROM DETALLE_VENTAS DV
+        INNER JOIN METODOS_PAGO MP ON MP.ID_METODO = DV.ID_METODO
+        WHERE DV.ID_CLIENTE = P_ID_CLIENTE
+        ORDER BY DV.FECHA_VENTA DESC;
     
 EXCEPTION
     WHEN NO_DATA_FOUND THEN
         P_NOMBRE_CLIENTE := 'Cliente no encontrado';
         P_TOTAL_GASTADO := 0;
-        -- Retornar cursor vacio
         OPEN P_CURSOR_REPORTE FOR SELECT NULL AS ID_VENTA FROM DUAL WHERE 1=0;
     WHEN OTHERS THEN
         P_NOMBRE_CLIENTE := 'ERROR';
@@ -250,8 +259,6 @@ END SP_REPORTE_VENTAS_CLIENTE;
 
 -- ======================================================
 -- PROCEDIMIENTO 4: Obtener detalles de un producto especifico
--- ======================================================
--- DESCRIPCION: Retorna informacion completa de un producto
 -- ======================================================
 
 CREATE OR REPLACE PROCEDURE SP_OBTENER_PRODUCTO (
@@ -327,10 +334,10 @@ DECLARE
     v_cursor SYS_REFCURSOR;
     v_nombre_cliente VARCHAR2(200);
     v_total_gastado NUMBER;
-    v_id_venta VENTAS.ID_VENTA%TYPE;
-    v_fecha VENTAS.FECHA_VENTA%TYPE;
+    v_id_venta NUMBER;
+    v_fecha DATE;
     v_metodo VARCHAR2(50);
-    v_total VENTAS.TOTAL%TYPE;
+    v_total NUMBER;
     v_cantidad_prod NUMBER;
 BEGIN
     DBMS_OUTPUT.PUT_LINE('=== PRUEBA 3: REPORTE DE VENTAS ===');
@@ -357,6 +364,6 @@ END;
 
 -- Verificar cambios en las tablas
 SELECT ID_PRODUCTO, NOMBRE, STOCK FROM PRODUCTOS WHERE ID_PRODUCTO = 1;
+SELECT * FROM DETALLE_VENTAS ORDER BY ID_DETALLE DESC;
 SELECT * FROM VENTAS ORDER BY ID_VENTA DESC;
-SELECT * FROM DETALLE_VENTA ORDER BY ID_DETALLE DESC;
 SELECT * FROM AUDITORIA_SISTEMA ORDER BY ID_AUDITORIA DESC;
